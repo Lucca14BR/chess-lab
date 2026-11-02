@@ -87,7 +87,9 @@ export function startPositionError(fen: string): string | null {
 }
 
 export function newGame(opts: { userColor: Color; level: number; fen?: string }): PlayGame {
-  return { startFen: opts.fen?.trim() || START_FEN, userColor: opts.userColor, level: opts.level, moves: [], resigned: false };
+  // FEN normalizada pelo chess.js (espaços, campos faltando), para o cabeçalho FEN do PGN sair canônico.
+  const startFen = opts.fen?.trim() ? new Chess(opts.fen.trim()).fen() : START_FEN;
+  return { startFen, userColor: opts.userColor, level: opts.level, moves: [], resigned: false };
 }
 
 /** Reproduz a partida desde o início (o histórico é necessário para a tripla repetição). */

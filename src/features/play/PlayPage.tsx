@@ -13,7 +13,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { Field, Input, Segmented } from '@/components/ui/Form';
 import { Alert, Spinner } from '@/components/ui/Feedback';
-import { confirm, toast } from '@/components/ui/Dialog';
+import { confirm } from '@/components/ui/Dialog';
 import { ChessBoard, type Promotion } from '@/components/board/ChessBoard';
 import {
   MIN_THINK_MS,
@@ -64,12 +64,17 @@ async function saveFinishedGame(id: string, g: PlayGame, end: GameEnd, name: str
     createdAt: now,
     updatedAt: now,
   });
-  await logActivity({
-    kind: 'game',
-    title: 'Partida contra o computador',
-    detail: `Nível ${g.level} · ${RESULT_WORD[outcome(end, g.userColor)]}`,
-    link: `/tabuleiro?propria=${id}`,
-  });
+  // Registro de atividade à parte: se falhar, a partida continua salva.
+  try {
+    await logActivity({
+      kind: 'game',
+      title: 'Partida contra o computador',
+      detail: `Nível ${g.level} · ${RESULT_WORD[outcome(end, g.userColor)]}`,
+      link: `/tabuleiro?propria=${id}`,
+    });
+  } catch {
+    /* sem registro no histórico, sem prejuízo para a partida */
+  }
 }
 
 export default function PlayPage() {
@@ -84,6 +89,8 @@ export default function PlayPage() {
   const [gameId, setGameId] = useState('');
   const [engineError, setEngineError] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState(false);
+  const [saveAttempt, setSaveAttempt] = useState(0);
   const [syncToken, setSyncToken] = useState(0);
   const savedRef = useRef(new Set<string>());
 
@@ -118,14 +125,17 @@ export default function PlayPage() {
     };
   }, [game, chess, end, userTurn, engineError]);
 
-  // Fim da partida: salva sozinha em Minhas partidas (uma vez por partida).
+  // Fim da partida: salva sozinha em Minhas partidas (uma vez por partida; sem lances, não há o que salvar).
   useEffect(() => {
-    if (!game || !end || savedRef.current.has(gameId)) return;
+    if (!game || !end || !game.moves.length || savedRef.current.has(gameId)) return;
     savedRef.current.add(gameId);
     saveFinishedGame(gameId, game, end, name)
       .then(() => setSavedId(gameId))
-      .catch(() => toast('Não foi possível salvar a partida neste navegador.', 'negative'));
-  }, [game, end, gameId, name]);
+      .catch(() => {
+        savedRef.current.delete(gameId);
+        setSaveError(true);
+      });
+  }, [game, end, gameId, name, saveAttempt]);
 
   const startGame = () => {
     let fen: string | undefined;
@@ -139,6 +149,7 @@ export default function PlayPage() {
     setGameId(uid());
     setEngineError(null);
     setSavedId(null);
+    setSaveError(false);
   };
 
   const onMove = (from: string, to: string, promotion?: Promotion) => {
@@ -161,7 +172,7 @@ export default function PlayPage() {
   const status = !game
     ? 'Escolha como quer jogar e comece quando quiser.'
     : end
-      ? end.text
+      ? 'Partida encerrada.'
       : engineError
         ? 'Partida pausada: o computador não respondeu.'
         : thinking
@@ -274,7 +285,28 @@ export default function PlayPage() {
 
                 {end && (
                   <Alert tone={end.winner === game.userColor ? 'positive' : end.winner ? 'warning' : 'info'} title={endHeadline(end, game.userColor)}>
-                    {end.text} {savedId ? 'A partida já está salva em Minhas partidas.' : 'Salvando em Minhas partidas…'}
+                    {end.text}{' '}
+                    {!game.moves.length ? 'Nenhum lance foi jogado, então não há partida para salvar.' : savedId ? 'A partida já está salva em Minhas partidas.' : saveError ? null : 'Salvando em Minhas partidas…'}
+                  </Alert>
+                )}
+
+                {end && saveError && (
+                  <Alert
+                    tone="negative"
+                    title="Não foi possível salvar a partida"
+                    action={
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSaveError(false);
+                          setSaveAttempt((n) => n + 1);
+                        }}
+                      >
+                        <RefreshCw /> Tentar de novo
+                      </Button>
+                    }
+                  >
+                    Houve um problema ao gravar neste navegador. Os lances continuam aqui na tela.
                   </Alert>
                 )}
 
@@ -296,7 +328,10 @@ export default function PlayPage() {
                     </>
                   ) : (
                     <>
-                      <Button onClick={() => setGame((g) => g && undoPair(g))} disabled={thinking || !canUndo(game)} title="Volta o seu último lance e a resposta do computador">
+                      <Button onClick={() => {
+                          setGame((g) => g && undoPair(g));
+                          setEngineError(null);
+                        }} disabled={thinking || !canUndo(game)} title="Volta o seu último lance e a resposta do computador">
                         <Undo2 /> Desfazer
                       </Button>
                       <Button variant="danger" onClick={() => void onResign()}>

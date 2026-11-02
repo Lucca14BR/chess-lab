@@ -86,6 +86,13 @@ describe('estado inicial', () => {
     expect(g2.startFen).toBe(fen)
     expect(isUserTurn(g2)).toBe(false)
   })
+  it('guarda a FEN normalizada (cabeçalho FEN canônico)', () => {
+    const g = newGame({ userColor: 'white', level: 1, fen: '7k/8/5QK1/8/8/8/8/8   w  -  -  0   1' })
+    expect(g.startFen).toBe('7k/8/5QK1/8/8/8/8/8 w - - 0 1')
+    const g2 = newGame({ userColor: 'white', level: 1, fen: '7k/8/5QK1/8/8/8/8/8 w' })
+    expect(g2.startFen).toBe('7k/8/5QK1/8/8/8/8/8 w - - 0 1')
+    expect(parsePgn(buildPlayPgn(play(g2, 'f6f7'), { userName: '' })).headers.FEN).toBe('7k/8/5QK1/8/8/8/8/8 w - - 0 1')
+  })
   it('valida a posição de partida', () => {
     expect(startPositionError(START_FEN)).toBeNull()
     expect(startPositionError('isto não é fen')).toMatch(/FEN inválida/)
