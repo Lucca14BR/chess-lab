@@ -5,6 +5,7 @@ import { START_FEN } from '@/lib/chess/board';
 import { parsePgn } from '@/lib/chess/pgn';
 import { engine } from '@/lib/engine/stockfish';
 import { logActivity } from '@/lib/services/activity';
+import { playSfx } from '@/lib/audio/sfx';
 import { useUserName } from '@/lib/hooks';
 import { RESULT_WORD } from '@/lib/labels';
 import { cn, uid } from '@/lib/utils';
@@ -47,6 +48,8 @@ function outcome(end: GameEnd, userColor: Color): 'win' | 'draw' | 'loss' {
   if (!end.winner) return 'draw';
   return end.winner === userColor ? 'win' : 'loss';
 }
+
+const END_SOUND = { win: 'Victory', loss: 'Defeat', draw: 'Draw' } as const;
 
 async function saveFinishedGame(id: string, g: PlayGame, end: GameEnd, name: string): Promise<void> {
   const pgn = buildPlayPgn(g, { userName: name });
@@ -93,6 +96,7 @@ export default function PlayPage() {
   const [saveAttempt, setSaveAttempt] = useState(0);
   const [syncToken, setSyncToken] = useState(0);
   const savedRef = useRef(new Set<string>());
+  const endSoundRef = useRef<string | null>(null); // partida cujo fim já tocou som
 
   const chess = useMemo(() => (game ? replay(game) : null), [game]);
   const end = useMemo(() => (game ? gameEnd(game) : null), [game]);
@@ -124,6 +128,13 @@ export default function PlayPage() {
       ctrl.abort();
     };
   }, [game, chess, end, userTurn, engineError]);
+
+  // Fim da partida: som de vitória, derrota ou empate (uma vez por partida)
+  useEffect(() => {
+    if (!game || !end || endSoundRef.current === gameId) return;
+    endSoundRef.current = gameId;
+    playSfx(END_SOUND[outcome(end, game.userColor)]);
+  }, [game, end, gameId]);
 
   // Fim da partida: salva sozinha em Minhas partidas (uma vez por partida; sem lances, não há o que salvar).
   useEffect(() => {

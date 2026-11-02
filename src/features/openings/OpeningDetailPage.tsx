@@ -25,15 +25,25 @@ export default function OpeningDetailPage() {
   const { openingId } = useParams();
   const navigate = useNavigate();
   const opening = OPENINGS.find((o) => o.id === openingId);
-  const [path, setPath] = useState<string[]>([]);
+  const [path, setPathState] = useState<string[]>([]);
+  const [navigated, setNavigated] = useState(false); // a posição veio de navegar pela árvore (para o som)
   const [flip, setFlip] = useState(false);
   const [resync, setResync] = useState(0);
 
   const tree = useMemo(() => (opening ? buildTree([{ moves: split(opening.mainLine), label: 'Linha principal' }, ...opening.lines.map((l) => ({ moves: split(l.moves), label: l.name }))]) : null), [opening]);
 
   useEffect(() => {
-    if (opening) setPath(split(opening.mainLine).slice(0, 4));
+    if (opening) {
+      setNavigated(false);
+      setPathState(split(opening.mainLine).slice(0, 4));
+    }
   }, [opening]);
+
+  /** Navegar pela árvore (botões, lista de lances, continuações). */
+  const setPath = (next: string[] | ((p: string[]) => string[])) => {
+    setNavigated(true);
+    setPathState(next);
+  };
 
   const node = tree ? findNode(tree, path) : null;
   const fen = node?.fen ?? START_FEN;
@@ -123,13 +133,16 @@ export default function OpeningDetailPage() {
               movable="turn"
               onMove={(from, to) => {
                 const next = children.find((c) => c.from === from && c.to === to);
-                if (next) setPath(next.path);
-                else {
+                if (next) {
+                  setNavigated(false);
+                  setPathState(next.path);
+                } else {
                   setResync((n) => n + 1);
                   toast('Este lance não está na árvore desta abertura. Para explorar livremente, abra a posição no Tabuleiro.', 'info');
                 }
               }}
               syncToken={path.length * 1000 + resync}
+              navigation={navigated}
               arrows={children.slice(0, 4).map((c, i) => ({ from: c.from, to: c.to, brush: i === 0 ? 'green' : 'paleBlue' }))}
             />
           </div>

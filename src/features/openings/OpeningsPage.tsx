@@ -232,8 +232,9 @@ function ImportDialog({ open, onClose, onCreated, intoId }: { open: boolean; onC
 
 function RepertoireEditor({ id, onBack }: { id: string; onBack: () => void }) {
   const entry = useLiveQuery(() => db.repertoire.get(id), [id]);
-  const [path, setPath] = useState<string[]>([]);
-  const [draft, setDraft] = useState<string[]>([]); // lances jogados além da árvore
+  const [path, setPathState] = useState<string[]>([]);
+  const [draft, setDraftState] = useState<string[]>([]); // lances jogados além da árvore
+  const [navigated, setNavigated] = useState(false); // a posição veio de navegar (para o som)
   const [importOpen, setImportOpen] = useState(false);
   const [notes, setNotes] = useState('');
   useEffect(() => setNotes(entry?.notes ?? ''), [entry?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -260,13 +261,23 @@ function RepertoireEditor({ id, onBack }: { id: string; onBack: () => void }) {
   const opening = OPENINGS.find((o) => o.id === entry.openingId);
 
   const update = (patch: Partial<RepertoireEntry>) => db.repertoire.update(id, { ...patch, updatedAt: Date.now() });
+  // Mudanças de posição fora do tabuleiro contam como navegação
+  const setPath = (next: string[] | ((p: string[]) => string[])) => {
+    setNavigated(true);
+    setPathState(next);
+  };
+  const setDraft = (next: string[] | ((d: string[]) => string[])) => {
+    setNavigated(true);
+    setDraftState(next);
+  };
 
   const onMove = (from: string, to: string, promotion?: string) => {
     const known = children.find((c) => c.from === from && c.to === to);
-    if (known) return setPath(known.path);
+    setNavigated(false);
+    if (known) return setPathState(known.path);
     try {
       const m = new Chess(fen).move({ from, to, promotion });
-      setDraft((d) => [...d, m.san]);
+      setDraftState((d) => [...d, m.san]);
     } catch {
       /* lance ilegal: o tabuleiro já impede */
     }
@@ -329,7 +340,7 @@ function RepertoireEditor({ id, onBack }: { id: string; onBack: () => void }) {
       <div className="grid gap-5 xl:grid-cols-[minmax(0,520px)_minmax(0,1fr)]">
         <div className="space-y-3">
           <div className="overflow-hidden rounded-md border border-line">
-            <ChessBoard fen={fen} orientation={entry.color} onMove={onMove} syncToken={full.length} arrows={children.slice(0, 5).map((c) => ({ from: c.from, to: c.to, brush: 'green' }))} />
+            <ChessBoard fen={fen} orientation={entry.color} onMove={onMove} syncToken={full.length} navigation={navigated} arrows={children.slice(0, 5).map((c) => ({ from: c.from, to: c.to, brush: 'green' }))} />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button size="icon-sm" variant="ghost" aria-label="Voltar um lance" disabled={!full.length} onClick={() => (draft.length ? setDraft((d) => d.slice(0, -1)) : setPath((p) => p.slice(0, -1)))}>

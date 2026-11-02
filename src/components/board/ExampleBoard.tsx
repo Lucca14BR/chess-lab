@@ -43,7 +43,7 @@ export function ExampleBoard({ fen, moves = [], orientation = 'white', arrows, c
   return (
     <div className={cn('space-y-2', className)}>
       <div className="overflow-hidden rounded-md border border-line">
-        <ChessBoard fen={cur.fen} orientation={ori} movable={false} lastMove={cur.from ? [cur.from, cur.to!] : null} arrows={ply === 0 ? arrows : undefined} />
+        <ChessBoard fen={cur.fen} orientation={ori} movable={false} lastMove={cur.from ? [cur.from, cur.to!] : null} arrows={ply === 0 ? arrows : undefined} navigation />
       </div>
       {moves.length > 0 && (
         <>

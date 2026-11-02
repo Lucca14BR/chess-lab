@@ -6,6 +6,7 @@ import type { Key } from '@lichess-org/chessground/types';
 import { Chess } from 'chess.js';
 import { legalDests, isPromotion, turnColor } from '@/lib/chess/board';
 import { useSettings } from '@/lib/settings';
+import { playMoveTransition } from '@/lib/audio/boardSound';
 import { cn } from '@/lib/utils';
 
 export type Promotion = 'q' | 'r' | 'b' | 'n';
@@ -35,6 +36,13 @@ export interface ChessBoardProps {
    * ele é jogado (pelo mesmo `onMove`) assim que a vez volta, se ainda for legal. Promoção em pré-lance vira dama.
    */
   premove?: boolean;
+  /**
+   * A página diz se a posição atual veio de navegar pelo histórico (setas, lista de lances, árvore).
+   * O som do lance segue a opção "Tocar ao navegar pelos lances"; saltos de vários lances só soam navegando.
+   */
+  navigation?: boolean;
+  /** Sons de lance (desligados nas miniaturas). */
+  sounds?: boolean;
 }
 
 const PROMO: Array<{ p: Promotion; label: string; glyph: string }> = [
@@ -44,7 +52,7 @@ const PROMO: Array<{ p: Promotion; label: string; glyph: string }> = [
   { p: 'n', label: 'Cavalo', glyph: '♞' },
 ];
 
-export function ChessBoard({ fen, orientation = 'white', movable = 'turn', lastMove, onMove, arrows, syncToken, className, coordinates, drawable = true, premove = false }: ChessBoardProps) {
+export function ChessBoard({ fen, orientation = 'white', movable = 'turn', lastMove, onMove, arrows, syncToken, className, coordinates, drawable = true, premove = false, navigation = false, sounds = true }: ChessBoardProps) {
   const settings = useSettings();
   const el = useRef<HTMLDivElement>(null);
   const api = useRef<Api | null>(null);
@@ -62,6 +70,17 @@ export function ChessBoard({ fen, orientation = 'white', movable = 'turn', lastM
   autoQueenRef.current = settings.autoQueen;
   const chessRef = useRef(chess);
   chessRef.current = chess;
+  const soundRef = useRef({ lastMove, navigation, sounds });
+  soundRef.current = { lastMove, navigation, sounds };
+  const prevFen = useRef<string | null>(null);
+
+  // Som do lance: toda troca de FEN passa por aqui (lance da pessoa, do adversário ou navegação)
+  useEffect(() => {
+    const prev = prevFen.current;
+    prevFen.current = fen;
+    const s = soundRef.current;
+    if (prev !== null && s.sounds) playMoveTransition(prev, fen, s.lastMove ?? null, s.navigation);
+  }, [fen]);
 
   // Cria o tabuleiro uma única vez.
   useEffect(() => {
@@ -178,5 +197,5 @@ export function ChessBoard({ fen, orientation = 'white', movable = 'turn', lastM
 
 /** Tabuleiro estático e leve para miniaturas. */
 export function MiniBoard({ fen, orientation = 'white', className, lastMove }: { fen: string; orientation?: 'white' | 'black'; className?: string; lastMove?: [string, string] | null }) {
-  return <ChessBoard fen={fen} orientation={orientation} movable={false} className={className} coordinates={false} drawable={false} lastMove={lastMove} />;
+  return <ChessBoard fen={fen} orientation={orientation} movable={false} className={className} coordinates={false} drawable={false} lastMove={lastMove} sounds={false} />;
 }

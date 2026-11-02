@@ -5,6 +5,7 @@ import { ChessBoard, type Promotion } from './ChessBoard';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Feedback';
 import { formatLine } from '@/lib/chess/board';
+import { playSfx } from '@/lib/audio/sfx';
 
 /**
  * Exercício interativo: o aluno joga os lances pares da solução (SAN); os ímpares são respostas automáticas.
@@ -48,6 +49,7 @@ export function ExerciseBoard({ fen, solution, checkmate, explanation, solved: i
     const isLast = step === solution.length - 1;
     const ok = (mv.from === expected.from && mv.to === expected.to && (mv.promotion ?? '') === (expected.promotion ?? '')) || (isLast && checkmate && probe.isCheckmate());
     if (!ok) {
+      playSfx('LowTime');
       setState('wrong');
       setToken((t) => t + 1);
       return;
@@ -57,6 +59,7 @@ export function ExerciseBoard({ fen, solution, checkmate, explanation, solved: i
     setLast([from, to]);
     setHint(null);
     if (isLast) {
+      playSfx('GenericNotify');
       setState('solved');
       onSolved?.();
       return;

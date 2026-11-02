@@ -190,7 +190,7 @@ export default function StudioPage() {
           <div className="flex gap-2">
             <EvalBar line={engineLines?.[0]} orientation={orientation} />
             <div className="min-w-0 flex-1 overflow-hidden rounded-md border border-line">
-              <ChessBoard fen={h.fen} orientation={orientation} onMove={onMove} lastMove={lastMove} arrows={arrows} syncToken={syncToken} />
+              <ChessBoard fen={h.fen} orientation={orientation} onMove={onMove} lastMove={lastMove} arrows={arrows} syncToken={syncToken} navigation={h.navigated} />
             </div>
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">

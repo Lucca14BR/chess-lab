@@ -5,6 +5,7 @@ import { db } from '@/lib/db/schema';
 import { puzzlePoints } from '@/lib/stats/study';
 import { logActivity } from '@/lib/services/activity';
 import { CATEGORY_INFO } from '@/lib/puzzles';
+import { playSfx } from '@/lib/audio/sfx';
 import { uid } from '@/lib/utils';
 
 export type PuzzleStatus = 'loading' | 'opponent' | 'playing' | 'solved' | 'failed';
@@ -98,6 +99,7 @@ export function usePuzzleSession(puzzle: Puzzle | null) {
       // Na última jogada, qualquer xeque-mate é aceito (critério usado pela Lichess).
       const correct = uci === expected || (isLast && probe.isCheckmate());
       if (!correct) {
+        playSfx('LowTime');
         setWrong(mv.san);
         setSyncToken((n) => n + 1);
         if (status === 'playing') {
@@ -113,6 +115,7 @@ export function usePuzzleSession(puzzle: Puzzle | null) {
       setLastMove([from, to]);
       if (isLast) {
         if (status === 'playing') {
+          playSfx('GenericNotify');
           setStatus('solved');
           void record(true);
         } else setStatus('failed');

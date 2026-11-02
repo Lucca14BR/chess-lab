@@ -17,6 +17,8 @@ export interface GameHistoryState {
   moves: HistMove[];
   /** Quantidade de lances aplicados (0 = posição inicial). */
   cursor: number;
+  /** A última mudança foi andar pelo histórico (voltar, avançar, ir a um lance), e não jogar ou carregar. */
+  navigated: boolean;
 }
 
 /**
@@ -24,7 +26,7 @@ export interface GameHistoryState {
  * e jogar um lance diferente a partir de um ponto anterior substitui a continuação.
  */
 export function useGameHistory(initialFen = START_FEN) {
-  const [state, setState] = useState<GameHistoryState>({ startFen: initialFen, moves: [], cursor: 0 });
+  const [state, setState] = useState<GameHistoryState>({ startFen: initialFen, moves: [], cursor: 0, navigated: false });
 
   const fen = state.cursor === 0 ? state.startFen : state.moves[state.cursor - 1].fen;
   const current = state.cursor > 0 ? state.moves[state.cursor - 1] : null;
@@ -49,10 +51,10 @@ export function useGameHistory(initialFen = START_FEN) {
     if (s.moves[s.cursor]?.uci === uci) {
       // Mesmo lance da continuação existente: apenas avança.
       played = s.moves[s.cursor];
-      next = { ...s, cursor: s.cursor + 1 };
+      next = { ...s, cursor: s.cursor + 1, navigated: false };
     } else {
       played = { san: mv.san, uci, from: mv.from, to: mv.to, fen: c.fen(), color: mv.color, comment: '' };
-      next = { ...s, moves: [...s.moves.slice(0, s.cursor), played], cursor: s.cursor + 1 };
+      next = { ...s, moves: [...s.moves.slice(0, s.cursor), played], cursor: s.cursor + 1, navigated: false };
     }
     ref.current = next;
     setState(next);
@@ -62,11 +64,11 @@ export function useGameHistory(initialFen = START_FEN) {
   const play = useCallback((from: string, to: string, promotion?: string) => apply({ from, to, promotion }), [apply]);
   const playSan = useCallback((san: string) => apply(san), [apply]);
 
-  const goTo = useCallback((cursor: number) => setState((s) => ({ ...s, cursor: Math.max(0, Math.min(s.moves.length, cursor)) })), []);
-  const undo = useCallback(() => setState((s) => ({ ...s, cursor: Math.max(0, s.cursor - 1) })), []);
-  const redo = useCallback(() => setState((s) => ({ ...s, cursor: Math.min(s.moves.length, s.cursor + 1) })), []);
-  const reset = useCallback((startFen = START_FEN) => setState({ startFen, moves: [], cursor: 0 }), []);
-  const load = useCallback((startFen: string, moves: HistMove[], cursor = moves.length) => setState({ startFen, moves, cursor }), []);
+  const goTo = useCallback((cursor: number) => setState((s) => ({ ...s, cursor: Math.max(0, Math.min(s.moves.length, cursor)), navigated: true })), []);
+  const undo = useCallback(() => setState((s) => ({ ...s, cursor: Math.max(0, s.cursor - 1), navigated: true })), []);
+  const redo = useCallback(() => setState((s) => ({ ...s, cursor: Math.min(s.moves.length, s.cursor + 1), navigated: true })), []);
+  const reset = useCallback((startFen = START_FEN) => setState({ startFen, moves: [], cursor: 0, navigated: false }), []);
+  const load = useCallback((startFen: string, moves: HistMove[], cursor = moves.length) => setState({ startFen, moves, cursor, navigated: false }), []);
   /** Remove os lances depois do cursor. */
   const truncate = useCallback(() => setState((s) => ({ ...s, moves: s.moves.slice(0, s.cursor) })), []);
   const setComment = useCallback((index: number, comment: string) => {

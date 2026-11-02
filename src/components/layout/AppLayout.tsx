@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { ConfirmHost, ToastHost } from '@/components/ui/Dialog';
+import { AudioHost } from '@/components/audio/AudioHost';
 import { LoadingBlock } from '@/components/ui/Feedback';
 import { getSettings } from '@/lib/settings';
 import { maybeAutoSync } from '@/lib/chesscom/sync';
@@ -36,6 +37,7 @@ export function AppLayout() {
       </div>
       <ConfirmHost />
       <ToastHost />
+      <AudioHost />
     </div>
   );
 }
