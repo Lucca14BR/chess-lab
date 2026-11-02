@@ -44,7 +44,7 @@ Os dados continuam no navegador de quem usa o site (IndexedDB). Para levar dados
 | Desempenho | Filtros por período, modalidade, cor; evolução de rating (uma modalidade por vez), V/E/D, por cor, por ritmo, por abertura, frequência, histórico mensal, lista de partidas, puzzles e tempo de estudo. |
 | Caderno de Estudos | Notas com categorias, tags, FEN, partida associada, erros recorrentes, coleções, favoritos, pesquisa e salvamento automático. |
 | Centro de Treino | Sessões cronometradas montáveis, modelos, sugestões baseadas nos resultados, plano semanal, calendário, metas e histórico/consistência. |
-| Configurações | Conta Chess.com (conectar, atualizar, escopo, PGN do mês, desconectar), tema, imagem do cabeçalho, tabuleiro e peças, motor, tutor de IA (chave e modelos), backup/restauração e licenças. |
+| Configurações | Conta Chess.com (conectar, atualizar, escopo, PGN do mês, desconectar), tema, imagem do cabeçalho, tabuleiro e peças, **som** (efeitos dos lances, música e chuva de fundo; também no botão de música da barra do topo), motor, tutor de IA (chave e modelos), backup/restauração e licenças. |
 
 ## Origem dos dados
 
@@ -104,6 +104,7 @@ src/
     stats/      estatísticas de partidas e de estudo (funções puras, testadas)
     services/   atividade, academia, recomendações, sessão de treino, backup
     puzzles/    carregamento e textos dos temas
+    audio/      efeitos dos lances, chuva e trovões gerados (Web Audio), player de música e as músicas da pessoa
   data/         conteúdo da Academia e da Biblioteca de Aberturas (validado por testes)
 scripts/        build-puzzles.mjs (extrai puzzles da base Lichess), copy-engine.mjs
 ```
@@ -119,5 +120,15 @@ O script faz streaming do arquivo `lichess_db_puzzle.csv.zst`, filtra por popula
 ## Licenças de terceiros
 
 Stockfish (GPLv3), Chessground (GPLv3), chess.js (BSD-2), puzzles Lichess (CC0), peças Cburnett e Merida (GPLv2+), Staunty (CC BY-NC-SA 4.0), Chessnut (Apache 2.0), fontes (SIL OFL).
+
+Som (Configurações › Som):
+
+- Efeitos sonoros (`public/sounds/`): pacotes Padrão, Piano, NES e Futurista da Lichess, criados por Enigmahack, licença AGPLv3 ou posterior ([lichess-org/lila, `public/sound`](https://github.com/lichess-org/lila/tree/master/public/sound)).
+- Músicas incluídas (`public/music/`), CC0 (domínio público) via OpenGameArt; os autores pedem crédito, então aqui vai:
+  - “Public Domain Jazz”, Alex McCulloch (Pro Sensory) — https://opengameart.org/content/public-domain-jazz
+  - “Mocha Frapp”, Alex McCulloch (Pro Sensory) — https://opengameart.org/content/mocha-frapp
+  - “Mirror Lake”, Joth — https://opengameart.org/content/mirror-lake
+  - “Bossa Nova”, Joth — https://opengameart.org/content/bossa-nova
+- Chuva e trovões são sintetizados no navegador pelo próprio Chess Lab (Web Audio), sem arquivos de terceiros. As músicas que você adiciona ficam só no seu navegador e não entram no backup.
 
 Serviço externo opcional: Gemini API (Google), usada apenas pelo tutor de IA, com a chave do próprio usuário e sujeita aos termos do Google.

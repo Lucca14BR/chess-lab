@@ -18,17 +18,20 @@ import { confirm, toast } from '@/components/ui/Dialog';
 import { ChessBoard } from '@/components/board/ChessBoard';
 import { ConnectChessCom } from '@/features/account/ConnectChessCom';
 import { TutorSection } from './TutorSection';
+import { SoundSection } from './SoundSection';
+import { BUNDLED_TRACKS, SFX_CREDIT } from '@/lib/audio/credits';
 import { cn, downloadText, formatDateTime, formatRelative, readFileAsDataUrl, readFileAsText } from '@/lib/utils';
 
 export default function SettingsPage() {
   return (
     <Page className="max-w-[1100px]">
-      <PageHeader eyebrow="Sistema" title="Configurações" description="Tudo do seu jeito: conta do Chess.com, aparência, tabuleiro, motor de análise e os seus dados locais." />
+      <PageHeader eyebrow="Sistema" title="Configurações" description="Tudo do seu jeito: conta do Chess.com, aparência, tabuleiro, som, motor de análise e os seus dados locais." />
       <div className="space-y-5">
         <AccountSection />
         <ProfileSection />
         <AppearanceSection />
         <BoardSection />
+        <SoundSection />
         <EngineSection />
         <TutorSection />
         <DataSection />
@@ -337,7 +340,7 @@ function DataSection() {
     }
   };
   const doClear = async () => {
-    const ok = await confirm({ title: 'Apagar todos os dados locais?', message: 'Notas, posições, progresso, treinos, partidas importadas, configurações e a chave do Gemini serão apagados deste navegador. Exporte um backup antes se quiser guardá-los. Esta ação não pode ser desfeita.', confirmLabel: 'Apagar tudo', danger: true });
+    const ok = await confirm({ title: 'Apagar todos os dados locais?', message: 'Notas, posições, progresso, treinos, partidas importadas, configurações, as músicas que você adicionou e a chave do Gemini serão apagados deste navegador. Exporte um backup antes se quiser guardá-los. Esta ação não pode ser desfeita.', confirmLabel: 'Apagar tudo', danger: true });
     if (!ok) return;
     await clearAllData();
     resetTutorUi();
@@ -399,6 +402,10 @@ function AboutSection() {
             </li>
           ))}
           <li>Fontes: Cormorant Garamond, Inter e JetBrains Mono (SIL OFL), servidas localmente.</li>
+          <li>
+            Efeitos sonoros: pacotes da Lichess por {SFX_CREDIT.author} ({SFX_CREDIT.license}).
+          </li>
+          <li>Músicas incluídas (CC0, OpenGameArt): {BUNDLED_TRACKS.map((t) => `“${t.name}”, de ${t.author}`).join('; ')}. Chuva e trovões são gerados no navegador.</li>
         </ul>
       </CardBody>
     </Card>

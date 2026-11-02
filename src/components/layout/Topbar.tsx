@@ -9,6 +9,7 @@ import { useStore } from '@/lib/store';
 import { syncStore } from '@/lib/chesscom/sync';
 import { sessionStore } from '@/lib/services/sessionRunner';
 import { GlobalSearch } from './GlobalSearch';
+import { SoundMenu } from './SoundMenu';
 import { cn } from '@/lib/utils';
 
 export function ThemeToggle() {
@@ -89,6 +90,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
               <Timer className="size-3.5" /> {session.paused ? 'Sessão pausada' : 'Sessão em andamento'}
             </Link>
           )}
+          <SoundMenu />
           <ThemeToggle />
           <Link to="/configuracoes" className="flex items-center gap-2 rounded-full border border-line py-0.5 pr-3 pl-0.5 hover:border-line-strong" title="Conta e configurações">
             {account?.profile.avatar ? (

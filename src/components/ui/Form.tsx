@@ -1,4 +1,4 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { forwardRef, useEffect, useRef, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
 const field =
@@ -72,6 +72,38 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
           {o.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Controle deslizante para valores de 0 a 1 (mostrado em %). Responde na hora na tela
+ * e só avisa `onChange` depois de uma pausa curta, para não gravar a cada pixel arrastado.
+ */
+export function Range({ id, label, value, onChange, disabled, className }: { id: string; label: string; value: number; onChange: (v: number) => void; disabled?: boolean; className?: string }) {
+  const [local, setLocal] = useState(value);
+  const timer = useRef<number | null>(null);
+  useEffect(() => {
+    if (timer.current === null) setLocal(value);
+  }, [value]);
+  useEffect(() => () => void (timer.current !== null && clearTimeout(timer.current)), []);
+  const change = (v: number) => {
+    setLocal(v);
+    if (timer.current !== null) clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      timer.current = null;
+      onChange(v);
+    }, 120);
+  };
+  return (
+    <div className={cn('space-y-1', className)}>
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <label htmlFor={id} className="text-ink-muted">
+          {label}
+        </label>
+        <span className="text-ink-faint tabular-nums">{Math.round(local * 100)}%</span>
+      </div>
+      <input id={id} type="range" min={0} max={100} step={1} value={Math.round(local * 100)} disabled={disabled} onChange={(e) => change(Number(e.target.value) / 100)} className="block w-full cursor-pointer accent-[var(--brass)] disabled:cursor-default disabled:opacity-50" />
     </div>
   );
 }
