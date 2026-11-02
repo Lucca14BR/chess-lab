@@ -13,21 +13,28 @@ export interface PlayLevel {
   skill?: number;
   /** Elo alvo (UCI_LimitStrength). */
   elo?: number;
-  /** Tempo de reflexão por lance. */
-  movetimeMs: number;
+  /** Profundidade máxima da busca (níveis fracos). */
+  depth?: number;
+  /** Tempo de reflexão por lance (níveis fortes). */
+  movetimeMs?: number;
+  /** Chance (0–1) de jogar um lance legal qualquer no lugar do lance do motor. */
+  slip: number;
   /** Descrição curta para a tela. */
   label: string;
 }
 
+// Mesmo no Skill Level 0 o Stockfish quase nunca entrega peças; por isso os níveis fracos
+// também limitam a profundidade e, de vez em quando, "deslizam" para um lance qualquer.
+// O UCI_Elo do Stockfish começa em 1320, então só os níveis 5–7 usam Elo.
 export const PLAY_LEVELS: PlayLevel[] = [
-  { level: 1, skill: 0, movetimeMs: 50, label: 'Bem fraco, para os primeiros passos' },
-  { level: 2, skill: 3, movetimeMs: 100, label: 'Fraco, ainda deixa peças escaparem' },
-  { level: 3, skill: 6, movetimeMs: 200, label: 'Iniciante, comete erros com frequência' },
-  { level: 4, skill: 10, movetimeMs: 300, label: 'Intermediário, joga com algum plano' },
-  { level: 5, elo: 1600, movetimeMs: 500, label: 'Clube, por volta de 1600' },
-  { level: 6, elo: 1900, movetimeMs: 700, label: 'Forte, por volta de 1900' },
-  { level: 7, elo: 2300, movetimeMs: 1000, label: 'Mestre, por volta de 2300' },
-  { level: 8, skill: 20, movetimeMs: 1500, label: 'Muito forte: o Stockfish com tudo' },
+  { level: 1, skill: 0, depth: 1, slip: 0.35, label: 'Bem fraco: entrega peças com frequência' },
+  { level: 2, skill: 0, depth: 2, slip: 0.2, label: 'Fraco: ainda deixa peças escaparem' },
+  { level: 3, skill: 2, depth: 3, slip: 0.1, label: 'Iniciante: comete erros de vez em quando' },
+  { level: 4, skill: 5, depth: 5, slip: 0.05, label: 'Intermediário: erra pouco, mas erra' },
+  { level: 5, elo: 1400, movetimeMs: 300, slip: 0, label: 'Clube, por volta de 1400' },
+  { level: 6, elo: 1700, movetimeMs: 500, slip: 0, label: 'Forte, por volta de 1700' },
+  { level: 7, elo: 2100, movetimeMs: 800, slip: 0, label: 'Avançado, por volta de 2100' },
+  { level: 8, skill: 20, movetimeMs: 1500, slip: 0, label: 'Muito forte: o Stockfish com tudo' },
 ];
 
 /** Pausa mínima antes de mostrar o lance do computador (para não parecer instantâneo). */
@@ -41,6 +48,19 @@ export function levelInfo(level: number): PlayLevel {
 export function levelStrength(level: number): EngineStrength {
   const l = levelInfo(level);
   return l.elo != null ? { elo: l.elo } : { skill: l.skill ?? 20 };
+}
+
+/** Limite da busca para o nível: profundidade nos fracos, tempo nos fortes. */
+export function levelSearch(level: number): { depth: number } | { movetimeMs: number } {
+  const l = levelInfo(level);
+  return l.depth != null ? { depth: l.depth } : { movetimeMs: l.movetimeMs ?? 1000 };
+}
+
+/** Com chance `slip`, troca o lance do motor por outro lance legal (deslize dos níveis fracos). */
+export function pickComputerMove(legal: string[], engineMove: string, slip: number, rng: () => number = Math.random): string {
+  const others = legal.filter((m) => m !== engineMove);
+  if (!others.length || rng() >= slip) return engineMove;
+  return others[Math.floor(rng() * others.length) % others.length];
 }
 
 export function computerName(level: number): string {

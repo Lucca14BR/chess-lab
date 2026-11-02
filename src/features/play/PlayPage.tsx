@@ -26,8 +26,10 @@ import {
   endHeadline,
   gameEnd,
   levelInfo,
+  levelSearch,
   levelStrength,
   newGame,
+  pickComputerMove,
   replay,
   resign,
   resolveColor,
@@ -110,12 +112,14 @@ export default function PlayPage() {
     const ctrl = new AbortController();
     const started = Date.now();
     engine
-      .analyze(chess.fen(), { movetimeMs: levelInfo(game.level).movetimeMs, strength: levelStrength(game.level), signal: ctrl.signal })
+      .analyze(chess.fen(), { ...levelSearch(game.level), strength: levelStrength(game.level), signal: ctrl.signal })
       .then(async (r) => {
         const wait = MIN_THINK_MS - (Date.now() - started);
         if (wait > 0) await new Promise((res) => setTimeout(res, wait));
         if (cancelled) return;
-        const next = r.bestMove ? applyMove(game, r.bestMove) : null;
+        const legal = chess.moves({ verbose: true }).map((m) => m.from + m.to + (m.promotion ?? ''));
+        const move = r.bestMove ? pickComputerMove(legal, r.bestMove, levelInfo(game.level).slip) : null;
+        const next = move ? applyMove(game, move) : null;
         if (!next) setEngineError('O computador não encontrou um lance nesta posição.');
         else setGame(next);
       })

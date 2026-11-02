@@ -7,6 +7,7 @@ import { logActivity } from '@/lib/services/activity';
 import { CATEGORY_INFO } from '@/lib/puzzles';
 import { playSfx } from '@/lib/audio/sfx';
 import { uid } from '@/lib/utils';
+import { judgeMove } from './puzzleStep';
 
 export type PuzzleStatus = 'loading' | 'opponent' | 'playing' | 'solved' | 'failed';
 
@@ -85,9 +86,7 @@ export function usePuzzleSession(puzzle: Puzzle | null) {
     (from: string, to: string, promotion?: string) => {
       if (!puzzle || (status !== 'playing' && status !== 'failed')) return;
       const c = chess.current;
-      const expected = puzzle.moves[step];
       const uci = from + to + (promotion ?? '');
-      const isLast = step === puzzle.moves.length - 1;
       const probe = new Chess(c.fen());
       let mv;
       try {
@@ -96,8 +95,7 @@ export function usePuzzleSession(puzzle: Puzzle | null) {
         setSyncToken((n) => n + 1);
         return;
       }
-      // Na última jogada, qualquer xeque-mate é aceito (critério usado pela Lichess).
-      const correct = uci === expected || (isLast && probe.isCheckmate());
+      const { correct, isLast, nextStep } = judgeMove(puzzle.moves, step, uci, probe.isCheckmate());
       if (!correct) {
         playSfx('LowTime');
         setWrong(mv.san);
@@ -113,6 +111,7 @@ export function usePuzzleSession(puzzle: Puzzle | null) {
       applyUci(c, uci);
       setFen(c.fen());
       setLastMove([from, to]);
+      setStep(nextStep);
       if (isLast) {
         if (status === 'playing') {
           playSfx('GenericNotify', { finale: true });
@@ -122,7 +121,6 @@ export function usePuzzleSession(puzzle: Puzzle | null) {
         return;
       }
       const reply = puzzle.moves[step + 1];
-      setStep(step + 2);
       timers.current.push(
         window.setTimeout(() => {
           const m = applyUci(c, reply);

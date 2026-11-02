@@ -13,6 +13,8 @@ import {
   gameFen,
   isUserTurn,
   levelStrength,
+  levelSearch,
+  pickComputerMove,
   newGame,
   resign,
   resolveColor,
@@ -32,23 +34,36 @@ const play = (g: PlayGame, ...ucis: string[]): PlayGame => {
 }
 
 describe('níveis', () => {
-  it('8 níveis com a tabela combinada', () => {
-    expect(PLAY_LEVELS.map((l) => [l.level, l.skill ?? null, l.elo ?? null, l.movetimeMs])).toEqual([
-      [1, 0, null, 50],
-      [2, 3, null, 100],
-      [3, 6, null, 200],
-      [4, 10, null, 300],
-      [5, null, 1600, 500],
-      [6, null, 1900, 700],
-      [7, null, 2300, 1000],
-      [8, 20, null, 1500],
+  it('8 níveis: os fracos limitam a profundidade e às vezes deslizam', () => {
+    expect(PLAY_LEVELS.map((l) => [l.level, l.skill ?? null, l.elo ?? null, l.depth ?? null, l.movetimeMs ?? null, l.slip])).toEqual([
+      [1, 0, null, 1, null, 0.35],
+      [2, 0, null, 2, null, 0.2],
+      [3, 2, null, 3, null, 0.1],
+      [4, 5, null, 5, null, 0.05],
+      [5, null, 1400, null, 300, 0],
+      [6, null, 1700, null, 500, 0],
+      [7, null, 2100, null, 800, 0],
+      [8, 20, null, null, 1500, 0],
     ])
     expect(PLAY_LEVELS.every((l) => l.label.length > 0)).toBe(true)
   })
   it('força enviada ao motor por nível', () => {
     expect(levelStrength(1)).toEqual({ skill: 0 })
-    expect(levelStrength(6)).toEqual({ elo: 1900 })
+    expect(levelStrength(6)).toEqual({ elo: 1700 })
     expect(levelStrength(8)).toEqual({ skill: 20 })
+  })
+  it('busca por nível: profundidade nos fracos, tempo nos fortes', () => {
+    expect(levelSearch(1)).toEqual({ depth: 1 })
+    expect(levelSearch(3)).toEqual({ depth: 3 })
+    expect(levelSearch(7)).toEqual({ movetimeMs: 800 })
+  })
+  it('deslize: com sorte baixa joga um lance legal diferente do motor', () => {
+    const legal = ['e2e4', 'd2d4', 'g1f3']
+    expect(pickComputerMove(legal, 'e2e4', 0.35, () => 0.1)).not.toBe('e2e4')
+    expect(legal).toContain(pickComputerMove(legal, 'e2e4', 0.35, () => 0.1))
+    expect(pickComputerMove(legal, 'e2e4', 0.35, () => 0.9)).toBe('e2e4')
+    expect(pickComputerMove(legal, 'e2e4', 0, () => 0)).toBe('e2e4')
+    expect(pickComputerMove(['e2e4'], 'e2e4', 1, () => 0)).toBe('e2e4')
   })
   it('pausa mínima visível', () => {
     expect(MIN_THINK_MS).toBe(400)

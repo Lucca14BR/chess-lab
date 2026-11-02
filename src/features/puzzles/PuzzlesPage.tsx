@@ -204,6 +204,11 @@ export default function PuzzlesPage() {
                   </Alert>
                 )}
                 {s.status === 'solved' && <Alert tone="positive" title="Puzzle resolvido">{`Tempo: ${formatDuration(s.elapsed)}.`}</Alert>}
+                {s.status === 'failed' && s.done && (
+                  <Alert tone="info" title="Puzzle concluído">
+                    Você chegou ao fim da solução. Como houve um erro antes, esta tentativa ficou registrada como não resolvida. Siga para o próximo ou refaça este quando quiser.
+                  </Alert>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {!finished && (
                     <Button onClick={s.showHint} disabled={s.status !== 'playing' || !!s.hint}>
