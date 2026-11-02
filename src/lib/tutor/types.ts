@@ -67,3 +67,10 @@ export interface FactsInput {
   played: AnalyzedMove | null
   asked: Array<{ san: string; uci: string; engine: AnalysisResult | null }>
 }
+
+// Trecho da resposta da IA: texto, lance conferido ou lance não verificado
+// fen = posição em que o lance foi lido
+export type Segment =
+  | { kind: 'text'; text: string }
+  | { kind: 'move'; text: string; san: string; uci: string; fen: string }
+  | { kind: 'unverified'; text: string }
