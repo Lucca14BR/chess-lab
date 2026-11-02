@@ -1,0 +1,197 @@
+@import 'tailwindcss';
+@import '@lichess-org/chessground/assets/chessground.base.css';
+@import '@lichess-org/chessground/assets/chessground.cburnett.css';
+@import './styles/board-themes.css';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* ------------------------------------------------------------------ */
+/* Tokens — paleta Chess Lab                                           */
+/* ------------------------------------------------------------------ */
+:root,
+[data-theme='dark'] {
+  --wood-dark: #211710;
+  --walnut: #382719;
+  --oak: #79583a;
+  --paper: #d5c1a0;
+  --ivory: #e8ddc8;
+  --moss: #8dad83;
+  --muted: #a99a84;
+
+  --bg: #1b130d;
+  --bg-panel: #241912;
+  --bg-panel-2: #2c1f16;
+  --bg-sunken: #170f0a;
+  --bg-hover: rgba(213, 193, 160, 0.06);
+  --border: rgba(213, 193, 160, 0.13);
+  --border-strong: rgba(213, 193, 160, 0.26);
+  --text: var(--ivory);
+  --text-muted: var(--muted);
+  --text-faint: #7d6f5d;
+  --accent: var(--paper);
+  --accent-fg: #211710;
+  --accent-soft: rgba(213, 193, 160, 0.12);
+  --brass: #c49a63;
+  --positive: var(--moss);
+  --positive-soft: rgba(141, 173, 131, 0.14);
+  --negative: #c9806e;
+  --negative-soft: rgba(201, 128, 110, 0.14);
+  --warning: #d4a95c;
+  --info: #9fb3c4;
+  --chart-grid: rgba(213, 193, 160, 0.09);
+  --shadow: 0 1px 0 rgba(255, 240, 210, 0.03) inset, 0 8px 24px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --bg: #efe6d6;
+  --bg-panel: #f8f2e7;
+  --bg-panel-2: #f2e9da;
+  --bg-sunken: #e6dbc7;
+  --bg-hover: rgba(56, 39, 25, 0.05);
+  --border: rgba(56, 39, 25, 0.14);
+  --border-strong: rgba(56, 39, 25, 0.28);
+  --text: #2a1d13;
+  --text-muted: #6e5d49;
+  --text-faint: #9a8a74;
+  --accent: #5a3f27;
+  --accent-fg: #f8f2e7;
+  --accent-soft: rgba(121, 88, 58, 0.12);
+  --brass: #8a6236;
+  --positive: #4f7a45;
+  --positive-soft: rgba(79, 122, 69, 0.12);
+  --negative: #a4503d;
+  --negative-soft: rgba(164, 80, 61, 0.1);
+  --warning: #9a6b17;
+  --info: #3f627e;
+  --chart-grid: rgba(56, 39, 25, 0.09);
+  --shadow: 0 1px 2px rgba(56, 39, 25, 0.06);
+  color-scheme: light;
+}
+
+@theme inline {
+  --font-serif: 'Cormorant Garamond', 'Libre Baskerville', Georgia, serif;
+  --font-sans: 'Inter', 'Manrope', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', monospace;
+
+  --color-bg: var(--bg);
+  --color-panel: var(--bg-panel);
+  --color-panel-2: var(--bg-panel-2);
+  --color-sunken: var(--bg-sunken);
+  --color-hover: var(--bg-hover);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--text);
+  --color-ink-muted: var(--text-muted);
+  --color-ink-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-brass: var(--brass);
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-walnut: var(--walnut);
+  --color-oak: var(--oak);
+  --color-paper: var(--paper);
+  --color-ivory: var(--ivory);
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                */
+/* ------------------------------------------------------------------ */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  background-color: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Textura discreta de madeira: veios finos + ruído */
+[data-theme='dark'] body {
+  background-image:
+    radial-gradient(ellipse at 20% -10%, rgba(121, 88, 58, 0.16), transparent 55%),
+    repeating-linear-gradient(92deg, rgba(255, 220, 170, 0.012) 0 2px, transparent 2px 7px, rgba(0, 0, 0, 0.035) 7px 9px, transparent 9px 17px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-attachment: fixed;
+}
+
+[data-theme='light'] body {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.15 0 0 0 0 0.1 0 0 0 .045 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+.font-display {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+}
+
+/* Painel: superfície 2D plana com borda fina */
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.panel-paper {
+  background:
+    linear-gradient(180deg, rgba(213, 193, 160, 0.04), transparent 40%),
+    var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
+}
+
+.prose-lab p {
+  margin: 0 0 0.8em;
+  line-height: 1.7;
+}
+
+.prose-lab p:last-child {
+  margin-bottom: 0;
+}
+
+/* Recharts — remove foco retangular padrão */
+.recharts-wrapper *:focus {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
