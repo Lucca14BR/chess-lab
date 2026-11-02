@@ -77,7 +77,7 @@ Entrada: FEN e, quando houver, o lance jogado e a análise do motor. Saída: obj
 
 - `tutorMessages` — `id, threadId, createdAt`. `threadId` = `review:${analysisId}` ou `pos:${positionKey}`. Campos: papel (`user`/`tutor`), texto, segmentos verificados, modelo usado, `factsHash`. Entra no backup e na contagem de armazenamento.
 - `secrets` — `key`. Guarda a chave do Gemini. **Não** entra em `exportBackup`/`importBackup`; é apagada por `clearAllData` e por "Remover chave".
-- `Settings` ganha `tutorPrimaryModel` e `tutorFallbackModel` (strings). Padrão, aplicado quando a lista é carregada e nada foi escolhido: descartar modelos cujo nome contenha `tts`, `image`, `audio`, `live` ou `embedding`; principal = o de nome mais alto em ordem decrescente que contenha `flash` e não `lite`; reserva = o de nome mais alto que contenha `flash-lite`. Se não houver, o usuário escolhe.
+- `Settings` ganha `tutorPrimaryModel` e `tutorFallbackModel` (strings). Padrão, aplicado quando a lista é carregada e nada foi escolhido: descartar modelos cujo nome contenha `tts`, `image`, `audio`, `live` ou `embedding`; também descartar `gemma`; ignorar ids com `preview`, `exp` ou `latest` quando houver um estável; ordenar pela versão numérica, decrescente; principal = o primeiro que contenha `flash` e não `lite`; reserva = o primeiro que contenha `flash-lite`. Os padrões também são aplicados ao salvar a chave (teste automático) e, se ainda faltarem, no primeiro pedido. Se não houver, o usuário escolhe.
 - `DataSource` ganha `'ai'` (etiqueta "IA", ícone de faísca, título "Explicação gerada por IA a partir da análise do motor").
 
 ## Telas
@@ -86,14 +86,14 @@ Entrada: FEN e, quando houver, o lance jogado e a análise do motor. Saída: obj
 
 - Campo da chave (tipo senha), link para o Google AI Studio, botões **Testar chave** (chama `listModels`) e **Remover chave**.
 - **Atualizar lista** de modelos; seletores **Modelo principal** e **Modelo reserva**.
-- Avisos fixos: no plano gratuito o Google pode usar o conteúdo enviado para melhorar os produtos; o envio inclui FEN, lances, avaliações e a pergunta, nada pessoal; a chave fica legível para quem usa este navegador — crie uma só para o Chess Lab e remova em computador compartilhado; limites e modelos gratuitos mudam a critério do Google.
+- Avisos fixos: no plano gratuito o Google pode usar o conteúdo enviado para melhorar os produtos; o envio inclui a posição (FEN), lances, avaliações do motor, o nível estimado e o texto da pergunta e das últimas mensagens da conversa — não escreva dados pessoais nas perguntas; a chave fica legível para quem usa este navegador — crie uma só para o Chess Lab e remova em computador compartilhado; limites e modelos gratuitos mudam a critério do Google.
 
 ### Tabuleiro › Análise da partida (A)
 
 - Botão **Revisão do tutor**, visível só com análise pronta.
 - Lista dos momentos: lance, classificação, título e explicação; clicar leva o tabuleiro ao momento e desenha a seta do melhor lance.
 - Resumo da partida, modelo usado, etiqueta "IA". Revisão salva; botão **Gerar de novo**.
-- Em cada momento, **Perguntar sobre este momento** abre a conversa (B) naquela posição.
+- Em cada momento, **Perguntar sobre este momento** abre a conversa (B) na posição depois do lance do usuário, com esse lance como "lance jogado".
 
 ### Tabuleiro › aba Tutor (B), ao lado do painel do motor
 
@@ -116,7 +116,8 @@ Revisão (A): `review.ts` escolhe os momentos → uma ficha por momento → um p
 | Situação | O que o usuário vê |
 | --- | --- |
 | Sem chave | Explicação de como ativar e botão para Configurações |
-| Chave recusada (400/401/403) | "Chave recusada pelo Google. Confira em Configurações." |
+| Chave recusada (401/403, ou 400 com `API_KEY_INVALID`) | "Chave recusada pelo Google. Confira em Configurações." |
+| Outro 400 (modelo recusou o pedido) | "O modelo escolhido recusou o pedido. Escolha outro em Configurações." |
 | Offline | "Sem conexão. O motor continua funcionando; o tutor volta quando a internet voltar." |
 | Limite (principal e reserva) | "Limite atingido. Tente de novo em X min" (X quando o Google informar) |
 | Resposta vazia/bloqueada | Mensagem e **Tentar de novo** |
