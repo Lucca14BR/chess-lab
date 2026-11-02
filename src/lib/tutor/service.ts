@@ -1,7 +1,7 @@
 // Serviço do tutor: pergunta → análise do motor → ficha → Gemini → conferência → Dexie.
 // As dependências (motor, Gemini, nível) são injetáveis para testar sem motor nem rede.
 import { Chess } from 'chess.js'
-import { GeminiError, generate as geminiGenerate } from '@/lib/ai/gemini'
+import { GeminiError, defaultModels, generate as geminiGenerate, listModels } from '@/lib/ai/gemini'
 import type { GenerateRequest, GenerateResult } from '@/lib/ai/gemini'
 import { positionKey, START_FEN } from '@/lib/chess/board'
 import { db } from '@/lib/db/schema'
@@ -9,7 +9,7 @@ import type { AnalyzedMove, GameAnalysis, NoteRow, TutorMessage } from '@/lib/db
 import { engine } from '@/lib/engine/stockfish'
 import type { AnalysisResult } from '@/lib/engine/stockfish'
 import { logActivity } from '@/lib/services/activity'
-import { getSettings } from '@/lib/settings'
+import { getSettings, setSetting } from '@/lib/settings'
 import { uid } from '@/lib/utils'
 import { buildFacts } from './facts'
 import { getGeminiKey, threadIds } from './key'
@@ -35,13 +35,21 @@ async function defaultAnalyze(fen: string): Promise<AnalysisResult> {
   return engine.analyze(fen, { depth: engineDepth, multiPv: MULTI_PV })
 }
 
-// Padrão: chave local e modelos escolhidos nas Configurações
+// Padrão: chave local e modelos escolhidos nas Configurações.
+// Sem modelo escolhido, aplica o padrão da lista da chave (como "Testar chave") e salva
 async function defaultGenerate(req: GenerateRequest): Promise<GenerateResult> {
   const key = await getGeminiKey()
   if (!key) throw new GeminiError('no-key', 'Nenhuma chave do Gemini configurada.')
-  const { tutorPrimaryModel, tutorFallbackModel } = await getSettings()
-  if (!tutorPrimaryModel) throw new GeminiError('not-found', 'Nenhum modelo escolhido')
-  return geminiGenerate(key, { primary: tutorPrimaryModel, fallback: tutorFallbackModel }, req)
+  let { tutorPrimaryModel: primary, tutorFallbackModel: fallback } = await getSettings()
+  if (!primary) {
+    const d = defaultModels(await listModels(key))
+    if (!d.primary) throw new GeminiError('no-model', 'Escolha um modelo em Configurações.')
+    primary = d.primary
+    fallback = fallback ?? d.fallback
+    await setSetting('tutorPrimaryModel', primary)
+    await setSetting('tutorFallbackModel', fallback)
+  }
+  return geminiGenerate(key, { primary, fallback }, req)
 }
 
 // Padrão: nível pelas estatísticas do Chess.com

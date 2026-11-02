@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ExternalLink, KeyRound, ListRestart, Save, Sparkles, Trash2 } from 'lucide-react';
-import { defaultModels, geminiErrorMessage, listModels, type GeminiModel } from '@/lib/ai/gemini';
+import { defaultModels, geminiErrorMessage, listModels, usableModels, type GeminiModel } from '@/lib/ai/gemini';
 import { getGeminiKey, removeGeminiKey, setGeminiKey, useHasGeminiKey } from '@/lib/tutor/key';
 import { setSetting, useSettings } from '@/lib/settings';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -18,20 +18,6 @@ export function TutorSection() {
   const [busy, setBusy] = useState<'save' | 'test' | 'refresh' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const save = async () => {
-    if (!draft.trim()) return;
-    setBusy('save');
-    try {
-      await setGeminiKey(draft);
-      setDraft('');
-      setModels(null);
-      setError(null);
-      toast('Chave salva neste navegador.', 'positive');
-    } finally {
-      setBusy(null);
-    }
-  };
-
   // Testar e atualizar usam a chave salva
   const load = async (kind: 'test' | 'refresh') => {
     setBusy(kind);
@@ -39,7 +25,8 @@ export function TutorSection() {
     try {
       const key = await getGeminiKey();
       if (!key) throw new Error('Nenhuma chave salva.');
-      const list = await listModels(key);
+      // Só modelos que o tutor consegue usar (sem Gemma, voz, imagem…)
+      const list = usableModels(await listModels(key));
       setModels(list);
       if (s.tutorPrimaryModel === null && s.tutorFallbackModel === null) {
         const d = defaultModels(list);
@@ -52,6 +39,22 @@ export function TutorSection() {
     } finally {
       setBusy(null);
     }
+  };
+
+  // Depois de salvar, testa a chave na hora (e aplica os modelos padrão)
+  const save = async () => {
+    if (!draft.trim()) return;
+    setBusy('save');
+    try {
+      await setGeminiKey(draft);
+      setDraft('');
+      setModels(null);
+      setError(null);
+      toast('Chave salva neste navegador.', 'positive');
+    } finally {
+      setBusy(null);
+    }
+    await load('test');
   };
 
   const remove = async () => {
@@ -145,7 +148,7 @@ export function TutorSection() {
         <Alert tone="warning" title="Antes de usar">
           <ul className="list-disc space-y-1 pl-5 text-xs">
             <li>No plano gratuito, o Google pode usar o conteúdo enviado para melhorar os produtos dele.</li>
-            <li>O envio inclui a posição (FEN), os lances, as avaliações do motor e a sua pergunta. Nada pessoal é enviado.</li>
+            <li>Inclui a posição (FEN), lances, avaliações do motor, seu nível estimado e o texto da pergunta e das últimas mensagens desta conversa. Não escreva dados pessoais nas perguntas.</li>
             <li>A chave fica legível para quem usa este navegador: crie uma chave só para o Chess Lab e remova-a em computador compartilhado.</li>
             <li>Limites e modelos gratuitos mudam a critério do Google.</li>
           </ul>

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { GeminiError, defaultModels, generate, geminiErrorMessage, listModels } from './gemini';
+import { GeminiError, defaultModels, generate, geminiErrorMessage, listModels, usableModels } from './gemini';
 
 const json = (body: unknown, status = 200, headers?: Record<string, string>) => new Response(JSON.stringify(body), { status, headers });
 const ok = (text: string) => json({ candidates: [{ content: { parts: [{ text }] } }] });
@@ -118,11 +118,31 @@ describe('generate', () => {
     expect(e.kind).toBe('timeout');
   });
 
-  it.each([400, 401, 403])('não usa a reserva em %i', async (status) => {
+  it.each([401, 403])('não usa a reserva em %i (chave recusada)', async (status) => {
     const fetchImpl = vi.fn(async () => json({}, status));
     const e = await failure(generate('K', MODELS, REQ, { fetchImpl: asFetch(fetchImpl) }));
     expect(e).toBeInstanceOf(GeminiError);
     expect(e.kind).toBe('invalid-key');
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it('400 com API_KEY_INVALID é chave recusada', async () => {
+    const body = { error: { code: 400, status: 'INVALID_ARGUMENT', message: 'API key not valid.', details: [{ '@type': 'type.googleapis.com/google.rpc.ErrorInfo', reason: 'API_KEY_INVALID', domain: 'googleapis.com' }] } };
+    const fetchImpl = vi.fn(async () => json(body, 400));
+    const e = await failure(generate('K', MODELS, REQ, { fetchImpl: asFetch(fetchImpl) }));
+    expect(e.kind).toBe('invalid-key');
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['sem detalhes', {}],
+    ['modelo sem instrução de sistema', { error: { code: 400, status: 'INVALID_ARGUMENT', message: 'Developer instruction is not enabled for models/gemma-3-27b-it' } }],
+    ['plano gratuito indisponível no país', { error: { code: 400, status: 'FAILED_PRECONDITION', message: 'User location is not supported for the API use without a billing account linked.' } }],
+  ])('outro 400 (%s) é pedido recusado, sem reserva', async (_name, body) => {
+    const fetchImpl = vi.fn(async () => json(body, 400));
+    const e = await failure(generate('K', MODELS, REQ, { fetchImpl: asFetch(fetchImpl) }));
+    expect(e.kind).toBe('bad-request');
+    expect(e.status).toBe(400);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
@@ -171,8 +191,24 @@ describe('defaultModels', () => {
     const list = ['models/gemini-9-flash', 'models/gemini-9-flash-lite', 'models/gemini-10-flash', 'models/gemini-10-flash-tts', 'models/gemini-10-pro'].map(m);
     expect(defaultModels(list)).toEqual({ primary: 'models/gemini-10-flash', fallback: 'models/gemini-9-flash-lite' });
   });
+  it('lista real: ignora alias, preview e modelos sem uso', () => {
+    const ids = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-flash-preview-09-2025', 'gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-2.5-pro', 'gemma-3-27b-it', 'gemini-2.5-flash-preview-tts'];
+    expect(defaultModels(ids.map((id) => m(`models/${id}`)))).toEqual({ primary: 'models/gemini-2.5-flash', fallback: 'models/gemini-2.5-flash-lite' });
+  });
+  it('só com preview, usa o preview', () => {
+    const list = ['models/gemini-3-flash-preview', 'models/gemini-flash-latest'].map(m);
+    expect(defaultModels(list).primary).toBe('models/gemini-3-flash-preview');
+  });
   it('sem flash, não escolhe nada', () => {
     expect(defaultModels(['models/gemini-10-pro'].map(m))).toEqual({ primary: null, fallback: null });
+  });
+});
+
+describe('usableModels', () => {
+  const m = (id: string) => ({ id, displayName: id, inputTokenLimit: 1, outputTokenLimit: 1 });
+  it('tira gemma, tts, imagem, áudio, live e embedding', () => {
+    const ids = ['models/gemini-2.5-flash', 'models/gemma-3-27b-it', 'models/gemini-2.5-flash-preview-tts', 'models/gemini-2.5-flash-image', 'models/gemini-2.5-flash-native-audio', 'models/gemini-live-2.5-flash', 'models/gemini-embedding-001', 'models/gemini-2.5-pro'];
+    expect(usableModels(ids.map(m)).map((x) => x.id)).toEqual(['models/gemini-2.5-flash', 'models/gemini-2.5-pro']);
   });
 });
 
@@ -186,6 +222,8 @@ describe('geminiErrorMessage', () => {
     expect(geminiErrorMessage(e)).toBe('Limite atingido. Tente de novo em 2 min');
     e.retryAfterSeconds = 5;
     expect(geminiErrorMessage(e)).toBe('Limite atingido. Tente de novo em 1 min');
+    expect(geminiErrorMessage(new GeminiError('bad-request', 'x'))).toBe('O modelo escolhido recusou o pedido. Escolha outro em Configurações.');
+    expect(geminiErrorMessage(new GeminiError('no-model', 'x'))).toBe('Escolha um modelo em Configurações.');
   });
   it('erro desconhecido tem texto genérico', () => {
     expect(geminiErrorMessage(new Error('boom'))).toMatch(/tutor/i);

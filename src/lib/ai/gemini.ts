@@ -13,7 +13,7 @@ export interface GeminiModel {
   outputTokenLimit: number;
 }
 
-export type GeminiErrorKind = 'no-key' | 'invalid-key' | 'rate-limit' | 'offline' | 'blocked' | 'empty' | 'server' | 'timeout' | 'not-found';
+export type GeminiErrorKind = 'no-key' | 'no-model' | 'invalid-key' | 'bad-request' | 'rate-limit' | 'offline' | 'blocked' | 'empty' | 'server' | 'timeout' | 'not-found';
 
 export class GeminiError extends Error {
   kind: GeminiErrorKind;
@@ -47,8 +47,16 @@ export interface GeminiDeps {
 /** Tipos de erro que justificam tentar o modelo reserva. */
 const FALLBACK_KINDS: GeminiErrorKind[] = ['rate-limit', 'not-found', 'server', 'timeout'];
 
-function kindForStatus(status: number): GeminiErrorKind {
-  if (status === 400 || status === 401 || status === 403) return 'invalid-key';
+/** O Google responde chave inválida com 400 + ErrorInfo reason API_KEY_INVALID. */
+function keyInvalid(body: unknown): boolean {
+  const details = (body as { error?: { details?: unknown } } | null)?.error?.details;
+  return Array.isArray(details) && details.some((d) => (d as { reason?: unknown } | null)?.reason === 'API_KEY_INVALID');
+}
+
+/** 400 só é chave recusada com API_KEY_INVALID; os demais (modelo sem suporte, plano indisponível…) são pedido recusado. */
+function kindForStatus(status: number, body: unknown): GeminiErrorKind {
+  if (status === 400) return keyInvalid(body) ? 'invalid-key' : 'bad-request';
+  if (status === 401 || status === 403) return 'invalid-key';
   if (status === 404) return 'not-found';
   if (status === 429) return 'rate-limit';
   return 'server';
@@ -77,7 +85,7 @@ async function errorFromResponse(res: Response): Promise<GeminiError> {
     // corpo ausente ou inválido: o status basta
   }
   const msg = (body as { error?: { message?: unknown } } | null)?.error?.message;
-  const e = new GeminiError(kindForStatus(res.status), typeof msg === 'string' ? msg : `O Gemini respondeu com erro ${res.status}.`, res.status);
+  const e = new GeminiError(kindForStatus(res.status, body), typeof msg === 'string' ? msg : `O Gemini respondeu com erro ${res.status}.`, res.status);
   if (e.kind === 'rate-limit') e.retryAfterSeconds = retryAfterFrom(res, body);
   return e;
 }
@@ -193,17 +201,43 @@ export async function generate(
   }
 }
 
-const EXCLUDED = /tts|image|audio|live|embedding/;
+/** Modelos que não servem para o tutor (voz, imagem, embeddings; Gemma não aceita instrução de sistema nem JSON). */
+const EXCLUDED = /tts|image|audio|live|embedding|gemma/;
+/** Alias e versões de teste: só entram se não houver versão estável. */
+const UNSTABLE = /preview|exp|latest/;
 
-/** Principal = flash mais novo; reserva = flash-lite mais novo. */
+/** Modelos que o tutor pode usar (os seletores das Configurações mostram só estes). */
+export function usableModels(models: GeminiModel[]): GeminiModel[] {
+  return models.filter((m) => !EXCLUDED.test(m.id));
+}
+
+/** Versão numérica do nome ('models/gemini-2.5-flash' → [2, 5]); sem número, []. */
+function version(id: string): number[] {
+  return /\d+(?:\.\d+)*/.exec(id)?.[0].split('.').map(Number) ?? [];
+}
+
+function byVersionDesc(a: string, b: string): number {
+  const va = version(a);
+  const vb = version(b);
+  for (let i = 0; i < Math.max(va.length, vb.length); i++) {
+    const d = (vb[i] ?? -1) - (va[i] ?? -1);
+    if (d !== 0) return d;
+  }
+  return b.localeCompare(a, undefined, { numeric: true });
+}
+
+/** Principal = flash mais novo; reserva = flash-lite mais novo; estável antes de preview/alias. */
 export function defaultModels(models: GeminiModel[]): { primary: string | null; fallback: string | null } {
-  const ids = models
+  const ids = usableModels(models)
     .map((m) => m.id)
-    .filter((id) => !EXCLUDED.test(id))
-    .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+    .sort(byVersionDesc);
+  const pick = (ok: (id: string) => boolean) => {
+    const found = ids.filter(ok);
+    return found.find((id) => !UNSTABLE.test(id)) ?? found[0] ?? null;
+  };
   return {
-    primary: ids.find((id) => id.includes('flash') && !id.includes('lite')) ?? null,
-    fallback: ids.find((id) => id.includes('flash-lite')) ?? null,
+    primary: pick((id) => id.includes('flash') && !id.includes('lite')),
+    fallback: pick((id) => id.includes('flash-lite')),
   };
 }
 
@@ -213,8 +247,12 @@ export function geminiErrorMessage(e: unknown): string {
   switch (e.kind) {
     case 'no-key':
       return 'Ative o tutor colando sua chave do Gemini em Configurações.';
+    case 'no-model':
+      return 'Escolha um modelo em Configurações.';
     case 'invalid-key':
       return 'Chave recusada pelo Google. Confira em Configurações.';
+    case 'bad-request':
+      return 'O modelo escolhido recusou o pedido. Escolha outro em Configurações.';
     case 'offline':
       return 'Sem conexão. O motor continua funcionando; o tutor volta quando a internet voltar.';
     case 'rate-limit':

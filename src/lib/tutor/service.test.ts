@@ -1,12 +1,13 @@
 import 'fake-indexeddb/auto'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Chess } from 'chess.js'
 import { START_FEN as START } from '@/lib/chess/board'
 import { GeminiError } from '@/lib/ai/gemini'
 import { db } from '@/lib/db/schema'
 import type { AnalyzedMove, GameAnalysis } from '@/lib/db/schema'
 import type { AnalysisResult } from '@/lib/engine/stockfish'
-import { threadIds } from './key'
+import { getSettings, setSetting } from '@/lib/settings'
+import { removeGeminiKey, setGeminiKey, threadIds } from './key'
 import { askTutor, clearTutorCache, generateReview, saveToNotebook } from './service'
 import type { TutorDeps } from './service'
 
@@ -252,6 +253,45 @@ describe('generateReview', () => {
     const kinds = msg.review?.moments[0].explanation.map((s) => s.kind) ?? []
     expect(kinds).toContain('move')
     expect(kinds).toContain('unverified')
+  })
+})
+
+describe('Gemini padrão (sem generate injetado)', () => {
+  const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 })
+  const model = (name: string) => ({ name, displayName: name, supportedGenerationMethods: ['generateContent'] })
+
+  beforeEach(async () => {
+    await setGeminiKey('K')
+    await setSetting('tutorPrimaryModel', null)
+    await setSetting('tutorFallbackModel', null)
+  })
+  afterEach(async () => {
+    vi.unstubAllGlobals()
+    await removeGeminiKey()
+    await db.settings.clear()
+  })
+
+  it('sem modelo escolhido, aplica o padrão da lista, salva e responde', async () => {
+    const fetchMock = vi.fn(async (url: string) =>
+      url.includes('/models?')
+        ? json({ models: ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemma-3-27b-it'].map((id) => model(`models/${id}`)) })
+        : json({ candidates: [{ content: { parts: [{ text: 'Resposta.' }] } }] }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const { analyze, level } = makeDeps().deps
+    const reply = await askTutor({ fen: START, played: null, question: 'Oi?' }, { analyze, level })
+    expect(reply.text).toBe('Resposta.')
+    expect(reply.model).toBe('models/gemini-2.5-flash')
+    const s = await getSettings()
+    expect(s.tutorPrimaryModel).toBe('models/gemini-2.5-flash')
+    expect(s.tutorFallbackModel).toBe('models/gemini-2.5-flash-lite')
+    expect(String(fetchMock.mock.calls[1][0])).toContain('models/gemini-2.5-flash:generateContent')
+  })
+
+  it('sem modelo e sem padrão possível: pede para escolher', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json({ models: [model('models/gemini-2.5-pro')] })))
+    const { analyze, level } = makeDeps().deps
+    await expect(askTutor({ fen: START, played: null, question: 'Oi?' }, { analyze, level })).rejects.toMatchObject({ kind: 'no-model' })
   })
 })
 
