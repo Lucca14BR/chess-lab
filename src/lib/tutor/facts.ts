@@ -68,6 +68,7 @@ function askedFacts(fen: string, input: FactsInput['asked']): AskedFact[] {
 }
 
 // Peças (de qualquer cor) atacadas pelo adversário e sem defensor
+// Limitação: `attackers` ignora cravadas e defensores em raio-X (ex.: torre atrás de torre)
 function hangingPieces(chess: Chess): PieceFact[] {
   const out: PieceFact[] = []
   for (const row of chess.board()) {

@@ -119,4 +119,33 @@ describe('factsMoves / factsPositions', () => {
     expect(fens).toContain('rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 1')
     expect(new Set(fens).size).toBe(fens.length)
   })
+
+  it('factsPositions com fenBefore diferente da FEN da ficha: conjunto exato', () => {
+    const apos = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1'
+    const eng = (pv: string[], fen: string): AnalysisResult => ({
+      fen,
+      depth: 12,
+      lines: [{ multipv: 1, depth: 12, cp: 10, mate: null, pv }],
+      bestMove: pv[0],
+    })
+    const g = buildFacts(
+      input(apos, {
+        engine: eng(['e7e5', 'g1f3'], apos),
+        played, // e2e4 jogado a partir de START (a ficha é da posição depois dele)
+        asked: [{ san: 'd5', uci: 'd7d5', engine: eng(['e4d5', 'd8d5'], '') }],
+      }),
+    )
+    expect(g.asked[0].reply).toEqual(['exd5', 'Qxd5'])
+    expect(new Set(factsPositions(g))).toEqual(
+      new Set([
+        apos, // FEN da ficha (também a posição depois do lance jogado)
+        START, // fenBefore do lance jogado
+        'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2', // linha, 1º lance
+        'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2', // linha, 2º lance
+        'rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2', // depois do lance perguntado
+        'rnbqkbnr/ppp1pppp/8/3P4/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2', // resposta, 1º lance
+        'rnb1kbnr/ppp1pppp/8/3q4/8/8/PPPP1PPP/RNBQKBNR w KQkq - 0 3', // resposta, 2º lance
+      ]),
+    )
+  })
 })
