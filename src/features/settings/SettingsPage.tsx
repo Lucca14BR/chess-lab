@@ -389,6 +389,7 @@ function AboutSection() {
         <ul className="list-disc space-y-1 pl-5 text-xs">
           <li>Puzzles: base pública da Lichess (database.lichess.org), licença CC0.</li>
           <li>Motor: Stockfish 19 (GPLv3), compilação WebAssembly de Nathan Rugg (stockfish.js).</li>
+          <li>Explicações do tutor: Gemini API (Google), com a chave do usuário.</li>
           <li>Regras: chess.js (BSD-2). Tabuleiro: Chessground, da Lichess (GPLv3).</li>
           {PIECE_SETS.map((p) => (
             <li key={p.id}>

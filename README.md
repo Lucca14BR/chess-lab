@@ -37,14 +37,14 @@ Os dados continuam no navegador de quem usa o site (IndexedDB). Para levar dados
 | Página | O que faz |
 | --- | --- |
 | Painel Inicial | Saudação, rating real, evolução, metas da semana, atividade, último treino, próximas atividades, aulas em andamento, puzzles e recomendações. Sem conta conectada, convida a conectar e não mostra números inventados. |
-| Tabuleiro | chess.js + Chessground: lances legais, arrastar e soltar, SAN/UCI, desfazer/refazer, comentários, FEN, PGN (importar/exportar, várias partidas), posições favoritas, partidas próprias, Stockfish sob demanda e análise completa de partida. |
+| Tabuleiro | chess.js + Chessground: lances legais, arrastar e soltar, SAN/UCI, desfazer/refazer, comentários, FEN, PGN (importar/exportar, várias partidas), posições favoritas, partidas próprias, Stockfish sob demanda, análise completa de partida e **tutor de IA** (revisão da partida e conversa sobre a posição). |
 | Puzzles | 1.350 puzzles reais da base CC0 da Lichess, 10 temas × 3 níveis, validação lance a lance, dica, solução, explicação por tema, pontuação, histórico, tempo, favoritos e estatísticas por tema. |
 | Academia | 8 trilhas com aulas, exemplos em tabuleiro, exercícios validados, progresso e pré-requisitos. |
 | Aberturas | Biblioteca (8 aberturas com ideias, planos dos dois lados, variantes, armadilhas, erros comuns, posições-chave), árvore de variantes navegável, anotações por posição e repertório próprio de brancas/pretas com importação e exportação de PGN. |
 | Desempenho | Filtros por período, modalidade, cor; evolução de rating (uma modalidade por vez), V/E/D, por cor, por ritmo, por abertura, frequência, histórico mensal, lista de partidas, puzzles e tempo de estudo. |
 | Caderno de Estudos | Notas com categorias, tags, FEN, partida associada, erros recorrentes, coleções, favoritos, pesquisa e salvamento automático. |
 | Centro de Treino | Sessões cronometradas montáveis, modelos, sugestões baseadas nos resultados, plano semanal, calendário, metas e histórico/consistência. |
-| Configurações | Conta Chess.com (conectar, atualizar, escopo, PGN do mês, desconectar), tema, imagem do cabeçalho, tabuleiro e peças, motor, backup/restauração e licenças. |
+| Configurações | Conta Chess.com (conectar, atualizar, escopo, PGN do mês, desconectar), tema, imagem do cabeçalho, tabuleiro e peças, motor, tutor de IA (chave e modelos), backup/restauração e licenças. |
 
 ## Origem dos dados
 
@@ -53,6 +53,7 @@ A interface marca a procedência dos números:
 - **Chess.com** — fornecido diretamente pela API (ratings atuais, melhores ratings, recordes, partidas).
 - **Calculado** — derivado pelo Chess Lab (séries de rating, pontuação por abertura/cor, precisão do Stockfish, recomendações).
 - **Manual** — registrado por você (metas manuais, sessões, notas).
+- **IA** — explicação escrita pelo tutor (Gemini) a partir da análise do motor; pode conter raciocínio discutível.
 
 ## Integração com o Chess.com
 
@@ -60,6 +61,32 @@ A interface marca a procedência dos números:
 - Requisições **em série** (fila única), tratamento de **429** com `Retry-After`/backoff exponencial, 5xx com nova tentativa.
 - Cache em IndexedDB: meses encerrados (24 h após o fim, considerando o atraso de até 12 h da API) não são baixados de novo; o mês atual é revalidado com `cache: 'no-cache'` (ETag).
 - Sincronização automática ao abrir quando os dados têm mais de 12 h (desligável). O app funciona offline com os dados locais.
+
+## Tutor de IA
+
+Explica a posição ou a partida em português, usando o Gemini (Google). O tutor **não calcula lances**: o chess.js e o Stockfish montam uma "ficha de fatos" e a IA só explica o que está nela.
+
+- **Revisão da partida** — depois da análise do Stockfish, comenta de 3 a 5 momentos decisivos dos seus lances.
+- **Conversa no Tabuleiro** (aba Tutor) — perguntas rápidas ou livres sobre a posição atual; as respostas ficam salvas e podem ir para o Caderno.
+
+### Primeiro uso
+
+1. Gere uma chave no [Google AI Studio](https://aistudio.google.com/apikey).
+2. Em **Configurações › Tutor de IA**, cole a chave, clique em **Salvar chave** e depois em **Testar chave**.
+3. Em **Tabuleiro**, abra a aba **Tutor** e pergunte (ou use **Revisão do tutor** na análise de uma partida).
+
+### Chave, privacidade e modelos
+
+- A chave é **sua** e fica só neste navegador (IndexedDB), legível para quem o usa. Ela **não entra no backup** e é apagada por "Remover chave" e por "Apagar todos os dados". Crie uma chave só para o Chess Lab e remova-a em computador compartilhado.
+- No plano gratuito o Google pode usar o conteúdo enviado para melhorar os produtos dele. O envio inclui apenas FEN, lances, avaliações do motor e a sua pergunta; nada pessoal.
+- Há um **modelo principal** e um **modelo reserva**, escolhidos entre os que a API lista para a sua chave. Cada resposta custa 1 pedido; o reserva só entra (2º pedido) se o principal atingir o limite, ficar indisponível, falhar no servidor ou demorar demais. Chave recusada não aciona o reserva. Limites e modelos gratuitos mudam a critério do Google.
+- Lances citados na resposta são conferidos: os confirmados pelo motor são clicáveis e desenham a seta; os demais aparecem como **não confirmado pelo motor**. Todo texto do tutor leva a etiqueta **IA**.
+
+### Limites
+
+- A conferência garante os **lances**, não o raciocínio: explicações de plano podem ser fracas ou discutíveis.
+- O tutor precisa de internet; o motor, não. Sem conexão, o resto do app segue funcionando.
+- Fora desta versão: orientação de estudo, outros provedores, tutor em Puzzles/Academia e voz.
 
 ## Arquitetura
 
@@ -72,6 +99,8 @@ src/
     chesscom/   cliente da PubAPI, normalização, sincronização
     db/         esquema Dexie (IndexedDB)
     engine/     Stockfish (Web Worker/UCI) e análise de partidas
+    ai/         cliente da API do Gemini (modelos, geração, modelo reserva, erros tipados)
+    tutor/      ficha de fatos, leitura e conferência de lances, prompts, revisão e serviço do tutor
     stats/      estatísticas de partidas e de estudo (funções puras, testadas)
     services/   atividade, academia, recomendações, sessão de treino, backup
     puzzles/    carregamento e textos dos temas
@@ -90,3 +119,5 @@ O script faz streaming do arquivo `lichess_db_puzzle.csv.zst`, filtra por popula
 ## Licenças de terceiros
 
 Stockfish (GPLv3), Chessground (GPLv3), chess.js (BSD-2), puzzles Lichess (CC0), peças Cburnett e Merida (GPLv2+), Staunty (CC BY-NC-SA 4.0), Chessnut (Apache 2.0), fontes (SIL OFL).
+
+Serviço externo opcional: Gemini API (Google), usada apenas pelo tutor de IA, com a chave do próprio usuário e sujeita aos termos do Google.
