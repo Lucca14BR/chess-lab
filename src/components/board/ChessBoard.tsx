@@ -30,6 +30,11 @@ export interface ChessBoardProps {
   coordinates?: boolean;
   /** Permite desenhar setas com o botão direito. */
   drawable?: boolean;
+  /**
+   * Pré-lances: com `movable` numa cor fixa, a pessoa pode marcar um lance enquanto o outro lado pensa;
+   * ele é jogado (pelo mesmo `onMove`) assim que a vez volta, se ainda for legal. Promoção em pré-lance vira dama.
+   */
+  premove?: boolean;
 }
 
 const PROMO: Array<{ p: Promotion; label: string; glyph: string }> = [
@@ -39,7 +44,7 @@ const PROMO: Array<{ p: Promotion; label: string; glyph: string }> = [
   { p: 'n', label: 'Cavalo', glyph: '♞' },
 ];
 
-export function ChessBoard({ fen, orientation = 'white', movable = 'turn', lastMove, onMove, arrows, syncToken, className, coordinates, drawable = true }: ChessBoardProps) {
+export function ChessBoard({ fen, orientation = 'white', movable = 'turn', lastMove, onMove, arrows, syncToken, className, coordinates, drawable = true, premove = false }: ChessBoardProps) {
   const settings = useSettings();
   const el = useRef<HTMLDivElement>(null);
   const api = useRef<Api | null>(null);
@@ -69,10 +74,10 @@ export function ChessBoard({ fen, orientation = 'white', movable = 'turn', lastM
       movable: {
         free: false,
         events: {
-          after: (orig, dest) => {
+          after: (orig, dest, meta) => {
             const c = chessRef.current;
             if (c && isPromotion(c, orig, dest)) {
-              if (autoQueenRef.current) onMoveRef.current?.(orig, dest, 'q');
+              if (autoQueenRef.current || meta?.premove) onMoveRef.current?.(orig, dest, 'q');
               else setPromo({ from: orig, to: dest, color: turnColor(c) });
               return;
             }
@@ -80,7 +85,7 @@ export function ChessBoard({ fen, orientation = 'white', movable = 'turn', lastM
           },
         },
       },
-      premovable: { enabled: false },
+      premovable: { enabled: premove },
       highlight: { lastMove: true, check: true },
     });
     const ro = new ResizeObserver(() => api.current?.redrawAll());
@@ -100,6 +105,8 @@ export function ChessBoard({ fen, orientation = 'white', movable = 'turn', lastM
     const color = chess ? turnColor(chess) : 'white';
     const canMove = movable === false ? undefined : movable === 'turn' ? color : movable;
     const canMoveNow = !!chess && canMove === color && !chess.isGameOver();
+    // Pré-lances: a cor da pessoa fica fixa, e ela pode mexer (marcar o pré-lance) também fora da vez.
+    const premoveColor = premove && (movable === 'white' || movable === 'black') && !!chess && !chess.isGameOver() ? movable : undefined;
     a.set({
       fen,
       orientation,
@@ -111,16 +118,22 @@ export function ChessBoard({ fen, orientation = 'white', movable = 'turn', lastM
       animation: { enabled: settings.animation },
       viewOnly: false,
       movable: {
-        color: canMoveNow ? color : undefined,
+        color: premoveColor ?? (canMoveNow ? color : undefined),
         dests: canMoveNow && chess ? legalDests(chess) : new Map(),
         showDests: settings.showLegalMoves,
       },
-      draggable: { enabled: canMoveNow, showGhost: true },
-      selectable: { enabled: canMoveNow },
+      premovable: { enabled: !!premoveColor },
+      draggable: { enabled: canMoveNow || !!premoveColor, showGhost: true },
+      selectable: { enabled: canMoveNow || !!premoveColor },
       drawable: { enabled: drawable, visible: true },
     });
     if (!lastMove) a.set({ lastMove: undefined });
-  }, [fen, orientation, movable, lastMove, chess, settings.coordinates, settings.coordinatesOnSquares, settings.showLegalMoves, settings.animation, coordinates, drawable, syncToken]);
+    if (premove) {
+      // Voltou a vez da pessoa: joga o pré-lance marcado (o Chessground descarta se for ilegal).
+      if (!premoveColor) a.cancelPremove();
+      else if (canMoveNow) a.playPremove();
+    }
+  }, [fen, orientation, movable, lastMove, chess, settings.coordinates, settings.coordinatesOnSquares, settings.showLegalMoves, settings.animation, coordinates, drawable, syncToken, premove]);
 
   useEffect(() => {
     const shapes: DrawShape[] = (arrows ?? []).map((a) => ({ orig: a.from as Key, dest: a.to as Key | undefined, brush: a.brush ?? 'green' }));
