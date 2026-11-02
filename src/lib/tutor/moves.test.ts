@@ -41,6 +41,11 @@ describe('findMoves', () => {
     expect(r.map((m) => m.san)).toEqual(['Nf3', 'Nc3'])
   })
 
+  it('casa depois de "em", "para", "casa"… não é lance', () => {
+    expect(findMoves('o cavalo vai para f3? e a casa e4? e o peão em d4?', START)).toEqual([])
+    expect(findMoves('e se f3?', START).map((m) => m.san)).toEqual(['f3'])
+  })
+
   it('ignora lances ilegais', () => {
     expect(findMoves('a ideia é e5 com Bb5', START)).toEqual([])
     const tokens = findMoveTokens('a ideia é e5 com Bb5')
@@ -54,6 +59,11 @@ describe('findMoves', () => {
 describe('findMoveTokens', () => {
   it('não confunde texto comum', () => {
     expect(findMoveTokens('De fato, a torre')).toEqual([])
+  })
+
+  it('faixas e palavras coladas não viram lance', () => {
+    expect(findMoveTokens('a diagonal a2-g8')).toEqual([])
+    expect(findMoveTokens('e4é f3d')).toEqual([])
   })
 
   it('acha roque e lances com sufixo', () => {

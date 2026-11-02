@@ -64,4 +64,21 @@ describe('verifyText', () => {
   it('texto sem lances é um único trecho', () => {
     expect(verifyText('Boa partida', facts)).toEqual([{ kind: 'text', text: 'Boa partida' }])
   })
+
+  it('casas na prosa ficam como texto, mesmo legais e na ficha', () => {
+    const text = 'O cavalo em f3 controla a casa d4 e a diagonal a2-g8; o peão de e5 avança.'
+    expect(verifyText(text, facts)).toEqual([{ kind: 'text', text }])
+    expect(verifyText('Ocupe a casa e5.', facts)).toEqual([{ kind: 'text', text: 'Ocupe a casa e5.' }])
+  })
+
+  it('casa solta fora da ficha não ganha aviso; só o lance com peça', () => {
+    const segs = verifyText('ou a torre para e1 (Te1)', facts)
+    expect(segs.filter((s) => s.kind === 'unverified').map((s) => s.text)).toEqual(['Te1'])
+    expect(verifyText('d4 também serve', facts)).toEqual([{ kind: 'text', text: 'd4 também serve' }])
+  })
+
+  it('casa solta que é lance da ficha continua clicável', () => {
+    const segs = verifyText('Depois de e4, e5 é natural.', facts)
+    expect(segs.filter((s) => s.kind === 'move').map((s) => s.text)).toEqual(['e4', 'e5'])
+  })
 })
