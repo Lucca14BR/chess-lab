@@ -89,6 +89,18 @@ describe('systemPrompt', () => {
     expect(p).not.toContain('pode citar planos, estruturas e casas críticas')
     expect(p).toContain('somente quando a ficha sustentar')
   })
+
+  it('com nome, fala com o aluno pelo nome', () => {
+    const p = systemPrompt('intermediario', 'Ana')
+    expect(p).toContain('O aluno se chama Ana')
+    expect(p).toContain('"você"')
+  })
+
+  it('sem nome (ou só espaços), não há linha do nome', () => {
+    expect(systemPrompt('intermediario')).not.toContain('se chama')
+    expect(systemPrompt('intermediario', '   ')).not.toContain('se chama')
+    expect(systemPrompt('intermediario', '')).toBe(systemPrompt('intermediario'))
+  })
 })
 
 describe('chatRequest', () => {
@@ -131,6 +143,12 @@ describe('chatRequest', () => {
     const req = chatRequest(facts, h, 'outra', 'avancado')
     expect(req.messages[0].role).toBe('user')
   })
+
+  it('leva o nome do aluno ao system', () => {
+    const req = chatRequest(facts, [], 'Oi?', 'avancado', 'Bia')
+    expect(req.system).toBe(systemPrompt('avancado', 'Bia'))
+    expect(req.system).toContain('Bia')
+  })
 })
 
 describe('reviewRequest', () => {
@@ -160,5 +178,12 @@ describe('reviewRequest', () => {
     const s = REVIEW_SCHEMA as any
     expect(s.required).toEqual(['moments', 'summary'])
     expect(s.properties.moments.items.required).toEqual(['ply', 'title', 'explanation', 'whatToConsider'])
+  })
+
+  it('leva o nome do aluno ao system', () => {
+    const req = reviewRequest(items, false, 'white', 'iniciante', 'Caio')
+    expect(req.system).toBe(systemPrompt('iniciante', 'Caio'))
+    expect(req.system).toContain('Caio')
+    expect(reviewRequest(items, false, 'white', 'iniciante').system).not.toContain('se chama')
   })
 })

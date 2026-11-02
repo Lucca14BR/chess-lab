@@ -30,7 +30,8 @@ function makeDeps(over: Partial<TutorDeps> = {}) {
   const analyze = vi.fn(async (fen: string) => analysisFor(fen, fen === START ? ['e2e4', 'e7e5'] : ['e7e5']))
   const generate = vi.fn(async (_req: unknown) => ({ text: 'Boa pergunta.', model: 'models/teste' }))
   const level = vi.fn(async () => 'intermediario' as const)
-  const deps: TutorDeps = { analyze, generate, level, ...over }
+  const name = vi.fn(async () => '')
+  const deps: TutorDeps = { analyze, generate, level, name, ...over }
   return { deps, analyze, generate }
 }
 
@@ -320,5 +321,43 @@ describe('saveToNotebook', () => {
     })
     const log = await db.activity.toArray()
     expect(log[0]).toMatchObject({ kind: 'note', title: 'Nota criada', detail: 'Tutor', link: `/caderno?nota=${id}` })
+  })
+})
+
+describe('nome do aluno', () => {
+  const systemOf = (generate: ReturnType<typeof makeDeps>['generate']) => (generate.mock.calls[0][0] as { system: string }).system
+
+  afterEach(async () => {
+    await db.settings.clear()
+    await db.account.clear()
+  })
+
+  it('a conversa leva o nome ao system', async () => {
+    const { deps, generate } = makeDeps({ name: async () => 'Ana' })
+    await askTutor({ fen: START, played: null, question: 'Oi?' }, deps)
+    expect(systemOf(generate)).toContain('O aluno se chama Ana')
+  })
+
+  it('a revisão leva o nome ao system', async () => {
+    const text = JSON.stringify({ moments: [momentJson(3)], summary: 'Resumo.' })
+    const generate = vi.fn(async (_req: unknown) => ({ text, model: 'm' }))
+    const { deps } = makeDeps({ generate, name: async () => 'Bia' })
+    await generateReview(gameAnalysis(), 'white', deps)
+    expect((generate.mock.calls[0][0] as { system: string }).system).toContain('O aluno se chama Bia')
+  })
+
+  it('padrão: usa o nome das Configurações', async () => {
+    await setSetting('displayName', '  Lia  ')
+    const { deps, generate } = makeDeps()
+    const { name: _ignored, ...rest } = deps
+    await askTutor({ fen: START, played: null, question: 'Oi?' }, rest)
+    expect(systemOf(generate)).toContain('O aluno se chama Lia.')
+  })
+
+  it('padrão: sem nome salvo nem conta, não há linha do nome', async () => {
+    const { deps, generate } = makeDeps()
+    const { name: _ignored, ...rest } = deps
+    await askTutor({ fen: START, played: null, question: 'Oi?' }, rest)
+    expect(systemOf(generate)).not.toContain('se chama')
   })
 })

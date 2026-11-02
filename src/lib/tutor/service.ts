@@ -1,5 +1,5 @@
 // Serviço do tutor: pergunta → análise do motor → ficha → Gemini → conferência → Dexie.
-// As dependências (motor, Gemini, nível) são injetáveis para testar sem motor nem rede.
+// As dependências (motor, Gemini, nível, nome) são injetáveis para testar sem motor nem rede.
 import { Chess } from 'chess.js'
 import { GeminiError, defaultModels, generate as geminiGenerate, listModels } from '@/lib/ai/gemini'
 import type { GenerateRequest, GenerateResult } from '@/lib/ai/gemini'
@@ -10,6 +10,7 @@ import { engine } from '@/lib/engine/stockfish'
 import type { AnalysisResult } from '@/lib/engine/stockfish'
 import { logActivity } from '@/lib/services/activity'
 import { getSettings, setSetting } from '@/lib/settings'
+import { getUserName } from '@/lib/userName'
 import { uid } from '@/lib/utils'
 import { buildFacts } from './facts'
 import { getGeminiKey, threadIds } from './key'
@@ -24,6 +25,7 @@ export interface TutorDeps {
   analyze: (fen: string) => Promise<AnalysisResult>
   generate: (req: GenerateRequest) => Promise<GenerateResult>
   level: () => Promise<TutorLevel>
+  name: () => Promise<string> // vazio = sem nome
 }
 
 const MULTI_PV = 3
@@ -64,6 +66,7 @@ const resolveDeps = (deps: Partial<TutorDeps>): TutorDeps => ({
   analyze: defaultAnalyze,
   generate: defaultGenerate,
   level: defaultLevel,
+  name: getUserName, // mesma regra do Painel e da barra lateral
   ...deps,
 })
 
@@ -146,9 +149,9 @@ export async function askTutor(
     played,
     asked: await askedWithEngine(d, fen, question, onPhase),
   })
-  const level = await d.level()
+  const [level, name] = await Promise.all([d.level(), d.name()])
   onPhase?.('consulting')
-  const result = await d.generate(chatRequest(facts, history, question, level))
+  const result = await d.generate(chatRequest(facts, history, question, level, name))
   const text = plainText(result.text)
 
   const reply: TutorMessage = {
@@ -211,7 +214,8 @@ export async function generateReview(
     items.push({ moment, facts })
   }
 
-  const req = reviewRequest(items, clean, userColor, await d.level())
+  const [level, name] = await Promise.all([d.level(), d.name()])
+  const req = reviewRequest(items, clean, userColor, level, name)
   let raw: RawReview | null = null
   let model = ''
   for (let attempt = 0; attempt < REVIEW_ATTEMPTS && !raw; attempt++) {

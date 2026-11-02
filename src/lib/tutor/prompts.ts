@@ -31,7 +31,9 @@ const LEVEL_HINT: Record<TutorLevel, string> = {
   avancado: 'Seja direto e técnico, sem explicar o básico; fale de planos e estruturas somente quando a ficha sustentar.',
 }
 
-export function systemPrompt(level: TutorLevel): string {
+// Com nome, o tutor fala com a pessoa como um professor particular
+export function systemPrompt(level: TutorLevel, name?: string): string {
+  const who = name?.trim()
   return [
     'Você é o tutor de xadrez do Chess Lab. Responda sempre em português do Brasil.',
     'Explique a posição usando apenas os fatos calculados que acompanham a última mensagem do aluno (Stockfish + regras): use apenas os fatos da ficha e não invente nada além deles.',
@@ -42,6 +44,9 @@ export function systemPrompt(level: TutorLevel): string {
     'Responda em texto simples, sem Markdown (sem asteriscos, títulos ou listas com *).',
     'Seja breve: na conversa, até cerca de 150 palavras.',
     `Nível do aluno: ${level}. ${LEVEL_HINT[level]}`,
+    ...(who
+      ? [`O aluno se chama ${who}. Fale com a pessoa em "você" e use o nome de vez em quando, como um professor particular, sem exagero e sem presumir gênero.`]
+      : []),
   ].join('\n')
 }
 
@@ -66,13 +71,14 @@ export function chatRequest(
   history: Array<{ role: 'user' | 'tutor'; text: string }>,
   question: string,
   level: TutorLevel,
+  name?: string,
 ): GenerateRequest {
   const past: Msg[] = history
     .slice(-MAX_HISTORY)
     .map((m) => ({ role: m.role === 'tutor' ? 'model' : 'user', text: m.text }))
   while (past.length > 0 && past[0].role === 'model') past.shift() // a conversa começa pelo usuário
   const messages = mergeSameRole([...past, { role: 'user', text: `${factsBlock(facts)}\n\nPergunta: ${question}` }])
-  return { system: systemPrompt(level), messages }
+  return { system: systemPrompt(level, name), messages }
 }
 
 export const REVIEW_SCHEMA: object = {
@@ -101,6 +107,7 @@ export function reviewRequest(
   clean: boolean,
   userColor: 'white' | 'black',
   level: TutorLevel,
+  name?: string,
 ): GenerateRequest {
   const side = userColor === 'white' ? 'brancas' : 'pretas'
   const moments = items.map(({ moment, facts }) => ({
@@ -121,5 +128,5 @@ export function reviewRequest(
     'Responda no JSON do esquema: em cada momento use o mesmo "ply" recebido, um título curto, a explicação e "whatToConsider" (o que considerar na posição); em "summary", um resumo da partida em poucas frases.',
     `${FACTS_INTRO}\n${JSON.stringify(moments)}`,
   ].join('\n\n')
-  return { system: systemPrompt(level), messages: [{ role: 'user', text }], jsonSchema: REVIEW_SCHEMA }
+  return { system: systemPrompt(level, name), messages: [{ role: 'user', text }], jsonSchema: REVIEW_SCHEMA }
 }
