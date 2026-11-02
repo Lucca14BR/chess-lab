@@ -18,7 +18,7 @@ import { chatRequest, levelFromStats, reviewRequest } from './prompts'
 import type { TutorLevel } from './prompts'
 import { pickMoments } from './review'
 import type { PositionFacts, Segment } from './types'
-import { verifyText } from './verify'
+import { plainText, verifyText } from './verify'
 
 export interface TutorDeps {
   analyze: (fen: string) => Promise<AnalysisResult>
@@ -141,13 +141,14 @@ export async function askTutor(
   const level = await d.level()
   onPhase?.('consulting')
   const result = await d.generate(chatRequest(facts, history, question, level))
+  const text = plainText(result.text)
 
   const reply: TutorMessage = {
     id: uid(),
     threadId,
     role: 'tutor',
-    text: result.text,
-    segments: verifyText(result.text, facts),
+    text,
+    segments: verifyText(text, facts),
     model: result.model,
     fen,
     createdAt: Math.max(Date.now(), asking.createdAt + 1), // sempre depois da pergunta
@@ -163,14 +164,23 @@ interface RawReview {
   summary: string
 }
 
-// Lê o JSON da revisão; null se não abrir ou não tiver o formato esperado
-function parseReview(text: string): RawReview | null {
+// Momento devolvido pela IA para o ply pedido, com todos os campos de texto
+function momentFor(raw: RawReview, ply: number): Record<string, unknown> | undefined {
+  return raw.moments.find(
+    (m) => m.ply === ply && typeof m.title === 'string' && typeof m.explanation === 'string' && typeof m.whatToConsider === 'string',
+  )
+}
+
+// Lê o JSON da revisão; null se não abrir, não tiver o formato esperado ou nenhum dos plies pedidos
+function parseReview(text: string, plies: number[]): RawReview | null {
   try {
     const data: unknown = JSON.parse(text)
     if (!data || typeof data !== 'object') return null
     const { moments, summary } = data as Record<string, unknown>
     if (!Array.isArray(moments) || typeof summary !== 'string') return null
-    return { moments: moments.filter((m): m is Record<string, unknown> => !!m && typeof m === 'object'), summary }
+    const raw = { moments: moments.filter((m): m is Record<string, unknown> => !!m && typeof m === 'object'), summary }
+    if (plies.length > 0 && !plies.some((ply) => momentFor(raw, ply))) return null
+    return raw
   } catch {
     return null
   }
@@ -199,33 +209,31 @@ export async function generateReview(
   for (let attempt = 0; attempt < REVIEW_ATTEMPTS && !raw; attempt++) {
     const result = await d.generate(req)
     model = result.model
-    raw = parseReview(result.text)
+    raw = parseReview(result.text, items.map((i) => i.moment.ply))
   }
   if (!raw) throw new GeminiError('empty', 'O tutor devolveu uma revisão que não pude ler. Tente de novo.')
 
   // Só os momentos pedidos, na ordem pedida; cada texto é conferido com a ficha do próprio momento
   const out: ReviewMomentOut[] = []
   for (const { moment, facts } of items) {
-    const found = raw.moments.find(
-      (m) => m.ply === moment.ply && typeof m.title === 'string' && typeof m.explanation === 'string' && typeof m.whatToConsider === 'string',
-    )
+    const found = momentFor(raw, moment.ply)
     if (!found) continue
     out.push({
       ply: moment.ply,
-      title: found.title as string,
-      explanation: verifyText(found.explanation as string, facts),
-      whatToConsider: verifyText(found.whatToConsider as string, facts),
+      title: plainText(found.title as string),
+      explanation: verifyText(plainText(found.explanation as string), facts),
+      whatToConsider: verifyText(plainText(found.whatToConsider as string), facts),
     })
   }
-  const summary: Segment[] = items.length
-    ? verifyText(raw.summary, items[0].facts)
-    : [{ kind: 'text', text: raw.summary }]
+  // O resumo fala da partida toda: vale a ficha de qualquer momento
+  const summaryText = plainText(raw.summary)
+  const summary: Segment[] = verifyText(summaryText, items.map((i) => i.facts))
 
   const message: TutorMessage = {
     id: uid(),
     threadId,
     role: 'tutor',
-    text: raw.summary,
+    text: summaryText,
     segments: summary,
     model,
     fen: analysis.moves[0]?.fenBefore ?? START_FEN,
@@ -245,7 +253,7 @@ export async function saveToNotebook(msg: TutorMessage): Promise<string> {
   const note: NoteRow = {
     id: uid(),
     title: 'Explicação do tutor',
-    body: msg.text,
+    body: plainText(msg.text),
     category: 'Tutor',
     collectionIds: [],
     tags: ['tutor'],

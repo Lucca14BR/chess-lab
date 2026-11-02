@@ -76,6 +76,19 @@ describe('systemPrompt', () => {
     expect(p).toContain('ponto de vista das brancas')
     expect(systemPrompt('avancado')).toContain('avancado')
   })
+
+  it('texto simples, notação, unidades e regra dos fatos sem brechas', () => {
+    const p = systemPrompt('avancado')
+    expect(p).toContain('Responda em texto simples, sem Markdown (sem asteriscos, títulos ou listas com *).')
+    expect(p).toContain('SAN em inglês (N = cavalo, B = bispo, R = torre, Q = dama, K = rei)')
+    expect(p).toContain('notação portuguesa (C = cavalo, B = bispo, T = torre, D = dama, R = rei)')
+    expect(p).toContain('pontos percentuais de chance de vitória perdidos')
+    expect(p).toContain('P = 1, C e B = 3, T = 5, D = 9')
+    expect(p).toContain('acompanham a última mensagem do aluno')
+    expect(p).not.toContain('cada mensagem')
+    expect(p).not.toContain('pode citar planos, estruturas e casas críticas')
+    expect(p).toContain('somente quando a ficha sustentar')
+  })
 })
 
 describe('chatRequest', () => {
@@ -132,6 +145,8 @@ describe('reviewRequest', () => {
     expect(text).toContain('pretas')
     expect(text).toContain('"evalBefore":"+0.20"')
     expect(text).toContain('"evalAfter":"-3.00"')
+    const mate = reviewRequest([{ moment: { ...moment(7), move: { ...moment(7).move, evalBefore: 9970 } }, facts }], false, 'white', 'avancado')
+    expect(mate.messages[0].text).toContain('"evalBefore":"M3"')
     expect(text).not.toContain('a partida não teve erros graves')
     expect(req.messages.every((m) => m.role === 'user')).toBe(true)
   })

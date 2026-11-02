@@ -1,14 +1,15 @@
 import { Fragment } from 'react';
 import type { Segment } from '@/lib/tutor/types';
+import { plainSegments } from '@/lib/tutor/verify';
 import { Badge } from '@/components/ui/Badge';
 
 type MoveSegment = Extract<Segment, { kind: 'move' }>;
 
-/** Texto do tutor: lances conferidos viram botões; lances não conferidos ganham aviso. */
+/** Texto do tutor: lances conferidos viram botões; lances não conferidos ganham aviso. Markdown que sobrou sai na exibição. */
 export function TutorText({ segments, onMove }: { segments: Segment[]; onMove?: (s: MoveSegment) => void }) {
   return (
     <p className="text-xs leading-relaxed whitespace-pre-line text-ink">
-      {segments.map((s, i) => {
+      {plainSegments(segments).map((s, i) => {
         if (s.kind === 'text') return <Fragment key={i}>{s.text}</Fragment>;
         if (s.kind === 'unverified') {
           return (

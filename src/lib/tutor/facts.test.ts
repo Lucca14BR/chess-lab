@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildFacts, factsMoves, factsPositions } from './facts'
+import { buildFacts, evalText, factsMoves, factsPositions } from './facts'
 import type { AnalysisResult } from '@/lib/engine/stockfish'
 import type { AnalyzedMove } from '@/lib/db/schema'
 import type { FactsInput } from './types'
@@ -62,6 +62,16 @@ describe('buildFacts', () => {
   })
 })
 
+describe('evalText', () => {
+  it('centipeões viram peões; mate convertido vira M', () => {
+    expect(evalText(20, null)).toBe('+0.20')
+    expect(evalText(9970, null)).toBe('M3')
+    expect(evalText(-9970, null)).toBe('-M3')
+    expect(evalText(-150, 2)).toBe('M2')
+    expect(evalText(-10000, 0)).toBe('#')
+  })
+})
+
 describe('factsMoves / factsPositions', () => {
   const played: AnalyzedMove = {
     ply: 1,
@@ -105,6 +115,12 @@ describe('factsMoves / factsPositions', () => {
       bestSan: 'd4',
     })
     expect(f.asked).toEqual([{ san: 'd4', uci: 'd2d4', evalAfter: '+0.20', reply: ['d5', 'c4'] }])
+  })
+
+  it('evalBefore de mate não vira peões', () => {
+    const g = buildFacts(input(START, { played: { ...played, evalBefore: 9980, evalAfter: 9970, mateAfter: 3 } }))
+    expect(g.played?.evalBefore).toBe('M2')
+    expect(g.played?.evalAfter).toBe('M3')
   })
 
   it('factsMoves inclui SAN de linhas, jogado, melhor e perguntados', () => {

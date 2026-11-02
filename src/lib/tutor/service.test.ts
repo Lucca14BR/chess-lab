@@ -117,6 +117,13 @@ describe('askTutor', () => {
     expect(await db.tutorMessages.where('threadId').equals(threadIds.position(FEN_B)).count()).toBe(2)
   })
 
+  it('tira Markdown da resposta', async () => {
+    const { deps } = makeDeps({ generate: async () => ({ text: '**Plano:**\n* jogue e4', model: 'm' }) })
+    const reply = await askTutor({ fen: START, played: null, question: 'Plano?' }, deps)
+    expect(reply.text).toBe('Plano:\n• jogue e4')
+    expect(reply.segments?.map((s) => s.text).join('')).toBe('Plano:\n• jogue e4')
+  })
+
   it('erro mantém a pergunta', async () => {
     const err = new GeminiError('rate-limit', 'muitas')
     const { deps } = makeDeps({ generate: async () => Promise.reject(err) })
@@ -197,6 +204,25 @@ describe('generateReview', () => {
     expect(msg.review?.moments.map((m) => m.ply)).toEqual([5])
   })
 
+  it('tenta de novo se o JSON não tiver nenhum dos momentos pedidos', async () => {
+    const ok = JSON.stringify({ moments: [momentJson(3)], summary: 'Resumo.' })
+    const generate = vi
+      .fn()
+      .mockResolvedValueOnce({ text: JSON.stringify({ moments: [momentJson(99)], summary: 'Resumo.' }), model: 'm' })
+      .mockResolvedValueOnce({ text: ok, model: 'm' })
+    const { deps } = makeDeps({ generate })
+    const msg = await generateReview(gameAnalysis(), 'white', deps)
+    expect(generate).toHaveBeenCalledTimes(2)
+    expect(msg.review?.moments.map((m) => m.ply)).toEqual([3])
+  })
+
+  it('confere o resumo com as fichas de todos os momentos', async () => {
+    const text = JSON.stringify({ moments: [momentJson(3)], summary: 'Cf3, Bc4 e Cg5.' })
+    const { deps } = makeDeps({ generate: async () => ({ text, model: 'm' }) })
+    const msg = await generateReview(gameAnalysis(), 'white', deps)
+    expect(msg.review?.summary.filter((s) => s.kind === 'move').map((s) => s.text)).toEqual(['Cf3', 'Bc4', 'Cg5'])
+  })
+
   it('rejeita com GeminiError empty depois de duas respostas inválidas', async () => {
     const generate = vi.fn().mockResolvedValue({ text: '{"moments": 3}', model: 'm' })
     const { deps } = makeDeps({ generate })
@@ -230,6 +256,12 @@ describe('generateReview', () => {
 })
 
 describe('saveToNotebook', () => {
+  it('a nota não leva Markdown', async () => {
+    const msg = { id: 'x', threadId: 't', role: 'tutor' as const, text: '**Plano**\n- e4', segments: null, model: 'm', fen: START, createdAt: 1 }
+    const note = await db.notes.get(await saveToNotebook(msg))
+    expect(note?.body).toBe('Plano\n• e4')
+  })
+
   it('cria a nota com fen, categoria, etiqueta e texto', async () => {
     const { deps } = makeDeps()
     const reply = await askTutor({ fen: START, played: null, question: 'Oi?' }, deps)

@@ -18,6 +18,14 @@ const NOMES: Record<PieceSymbol, string> = {
 }
 const VALOR: Record<PieceSymbol, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 }
 
+const MATE_CP = 9000 // a partir daqui o centipeão é um mate convertido (10000 - 10 × lances)
+
+// Avaliação salva em centipeões (mate convertido) como texto: "+0.35", "M3", "-M3"
+export function evalText(cp: number, mate: number | null): string {
+  if (mate == null && Math.abs(cp) >= MATE_CP) mate = Math.sign(cp) * Math.round((10000 - Math.abs(cp)) / 10)
+  return formatEval({ cp, mate })
+}
+
 const cor = (c: Color): 'white' | 'black' => (c === 'w' ? 'white' : 'black')
 
 // Joga um lance UCI e devolve a FEN resultante (null se ilegal)
@@ -114,8 +122,8 @@ export function buildFacts(input: FactsInput): PositionFacts {
       san: played.san,
       uci: played.uci,
       fenBefore: played.fenBefore,
-      evalBefore: formatEval({ cp: played.evalBefore, mate: null }),
-      evalAfter: formatEval({ cp: played.evalAfter, mate: played.mateAfter }),
+      evalBefore: evalText(played.evalBefore, null),
+      evalAfter: evalText(played.evalAfter, played.mateAfter),
       winLoss: played.winLoss,
       classification: played.classification,
       bestSan: played.bestSan,

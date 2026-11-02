@@ -3,7 +3,7 @@ import type { GenerateRequest } from '@/lib/ai/gemini'
 import type { ChessComStats } from '@/lib/chesscom/types'
 import { modeStats } from '@/lib/chesscom/normalize'
 import type { TimeClass } from '@/lib/db/schema'
-import { formatEval } from '@/lib/engine/stockfish'
+import { evalText } from './facts'
 import type { PositionFacts } from './types'
 import type { ReviewMoment } from './review'
 
@@ -28,16 +28,18 @@ export function levelFromStats(stats: ChessComStats | null | undefined): TutorLe
 const LEVEL_HINT: Record<TutorLevel, string> = {
   iniciante: 'Use palavras simples, explique os conceitos básicos e evite jargão.',
   intermediario: 'Pode usar termos comuns de xadrez (garfo, cravada, estrutura de peões) com breves explicações.',
-  avancado: 'Seja direto e técnico; pode citar planos, estruturas e casas críticas sem explicar o básico.',
+  avancado: 'Seja direto e técnico, sem explicar o básico; fale de planos e estruturas somente quando a ficha sustentar.',
 }
 
 export function systemPrompt(level: TutorLevel): string {
   return [
     'Você é o tutor de xadrez do Chess Lab. Responda sempre em português do Brasil.',
-    'Explique a posição usando apenas os fatos calculados que acompanham cada mensagem (Stockfish + regras): use apenas os fatos da ficha e não invente nada além deles.',
+    'Explique a posição usando apenas os fatos calculados que acompanham a última mensagem do aluno (Stockfish + regras): use apenas os fatos da ficha e não invente nada além deles.',
     'Não sugira lances que não estejam na ficha. Se a ficha não permite responder, diga isso com clareza.',
     'Todas as avaliações da ficha (eval, evalBefore, evalAfter) estão no ponto de vista das brancas: valor positivo é bom para as brancas, negativo é bom para as pretas (em peões; "M3" é mate em 3 para as brancas e "-M3" para as pretas).',
-    'Escreva os lances em notação portuguesa (C = cavalo, B = bispo, T = torre, D = dama, R = rei), por exemplo Cf3 ou Dxf7.',
+    'Na ficha, winLoss são os pontos percentuais de chance de vitória perdidos com o lance, e material soma P = 1, C e B = 3, T = 5, D = 9.',
+    'A ficha usa SAN em inglês (N = cavalo, B = bispo, R = torre, Q = dama, K = rei). Na resposta, escreva os lances em notação portuguesa (C = cavalo, B = bispo, T = torre, D = dama, R = rei), por exemplo Cf3 ou Dxf7.',
+    'Responda em texto simples, sem Markdown (sem asteriscos, títulos ou listas com *).',
     'Seja breve: na conversa, até cerca de 150 palavras.',
     `Nível do aluno: ${level}. ${LEVEL_HINT[level]}`,
   ].join('\n')
@@ -106,8 +108,8 @@ export function reviewRequest(
     reason: moment.reason,
     played: moment.move.san,
     best: moment.move.bestSan,
-    evalBefore: formatEval({ cp: moment.move.evalBefore, mate: null }),
-    evalAfter: formatEval({ cp: moment.move.evalAfter, mate: moment.move.mateAfter }),
+    evalBefore: evalText(moment.move.evalBefore, null),
+    evalAfter: evalText(moment.move.evalAfter, moment.move.mateAfter),
     winLoss: moment.move.winLoss,
     facts,
   }))
