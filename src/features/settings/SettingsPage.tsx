@@ -16,6 +16,7 @@ import { Alert, ProgressBar } from '@/components/ui/Feedback';
 import { confirm, toast } from '@/components/ui/Dialog';
 import { ChessBoard } from '@/components/board/ChessBoard';
 import { ConnectChessCom } from '@/features/account/ConnectChessCom';
+import { TutorSection } from './TutorSection';
 import { cn, downloadText, formatDateTime, formatRelative, readFileAsDataUrl, readFileAsText } from '@/lib/utils';
 
 export default function SettingsPage() {
@@ -28,6 +29,7 @@ export default function SettingsPage() {
         <AppearanceSection />
         <BoardSection />
         <EngineSection />
+        <TutorSection />
         <DataSection />
         <AboutSection />
       </div>
