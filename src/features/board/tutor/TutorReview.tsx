@@ -22,24 +22,24 @@ export function TutorReview({ analysis, userColor, onGo, onAsk }: { analysis: Ga
   const hasKey = useHasGeminiKey();
   const thread = threadIds.review(analysis.id);
   const review = useLiveQuery(() => db.tutorMessages.where('threadId').equals(thread).first(), [thread]);
-  const [pick, setPick] = useState<Color>('white');
+  // null = o usuário ainda não escolheu: vale a cor da revisão salva
+  const [pick, setPick] = useState<Color | null>(null);
   // Pedido e erro vêm do store, pela conversa desta análise: sobrevivem à troca de aba
   const { pending, errors } = useStore(tutorStore);
-  const color = userColor ?? pick;
+  const data = review?.review;
+  const color = userColor ?? pick ?? data?.userColor ?? 'white';
   const running = !!pending[thread];
   const disabled = Object.keys(pending).length > 0; // um pedido por vez no app
   const error = errors[thread];
 
   const run = () => void reviewGame(analysis, color);
 
-  const data = review?.review;
-
   return (
     <div className="space-y-3 border-t border-line pt-4">
       <div className="flex flex-wrap items-center gap-2">
         <p className="mr-auto text-xs tracking-wide text-ink-muted uppercase">Revisão do tutor</p>
         {hasKey && !userColor && (
-          <Segmented size="sm" value={pick} onChange={setPick} ariaLabel="Cor revisada" options={[{ value: 'white', label: 'Revisar como Brancas' }, { value: 'black', label: 'Revisar como Pretas' }]} />
+          <Segmented size="sm" value={color} onChange={setPick} ariaLabel="Cor revisada" options={[{ value: 'white', label: 'Revisar como Brancas' }, { value: 'black', label: 'Revisar como Pretas' }]} />
         )}
         {hasKey && (
           <Button size="sm" variant={data ? 'secondary' : 'primary'} onClick={run} disabled={disabled}>
@@ -93,7 +93,7 @@ export function TutorReview({ analysis, userColor, onGo, onAsk }: { analysis: Ga
                       </div>
                     )}
                   </div>
-                  <Button size="sm" variant="ghost" className="mt-1" onClick={() => onAsk(mo.ply - 1)}>
+                  <Button size="sm" variant="ghost" className="mt-1" onClick={() => onAsk(mo.ply)}>
                     <MessageCircleQuestion /> Perguntar sobre este momento
                   </Button>
                 </li>

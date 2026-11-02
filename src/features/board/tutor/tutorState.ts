@@ -74,3 +74,8 @@ export async function saveReply(msg: TutorMessage): Promise<string | null> {
     saving.delete(msg.id);
   }
 }
+
+/** Depois de "Apagar dados locais": esquece notas criadas e erros (evita "Abrir nota" para nota apagada). */
+export function resetTutorUi(): void {
+  tutorStore.set({ errors: {}, notes: {} });
+}

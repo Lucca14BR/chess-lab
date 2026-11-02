@@ -66,21 +66,21 @@ A interface marca a procedência dos números:
 
 Explica a posição ou a partida em português, usando o Gemini (Google). O tutor **não calcula lances**: o chess.js e o Stockfish montam uma "ficha de fatos" e a IA só explica o que está nela.
 
-- **Revisão da partida** — depois da análise do Stockfish, comenta de 3 a 5 momentos decisivos dos seus lances.
+- **Revisão da partida** — depois da análise do Stockfish, comenta até 5 momentos decisivos dos seus lances.
 - **Conversa no Tabuleiro** (aba Tutor) — perguntas rápidas ou livres sobre a posição atual; as respostas ficam salvas e podem ir para o Caderno.
 
 ### Primeiro uso
 
 1. Gere uma chave no [Google AI Studio](https://aistudio.google.com/apikey).
-2. Em **Configurações › Tutor de IA**, cole a chave, clique em **Salvar chave** e depois em **Testar chave**.
+2. Em **Configurações › Tutor de IA**, cole a chave e clique em **Salvar chave**: ela é testada na hora e os modelos padrão são escolhidos (**Testar chave** repete o teste).
 3. Em **Tabuleiro**, abra a aba **Tutor** e pergunte (ou use **Revisão do tutor** na análise de uma partida).
 
 ### Chave, privacidade e modelos
 
-- A chave é **sua** e fica só neste navegador (IndexedDB), legível para quem o usa. Ela **não entra no backup** e é apagada por "Remover chave" e por "Apagar todos os dados". Crie uma chave só para o Chess Lab e remova-a em computador compartilhado.
-- No plano gratuito o Google pode usar o conteúdo enviado para melhorar os produtos dele. O envio inclui apenas FEN, lances, avaliações do motor e a sua pergunta; nada pessoal.
-- Há um **modelo principal** e um **modelo reserva**, escolhidos entre os que a API lista para a sua chave. Cada resposta custa 1 pedido; o reserva só entra (2º pedido) se o principal atingir o limite, ficar indisponível, falhar no servidor ou demorar demais. Chave recusada não aciona o reserva. Limites e modelos gratuitos mudam a critério do Google.
-- Lances citados na resposta são conferidos: os confirmados pelo motor são clicáveis e desenham a seta; os demais aparecem como **não confirmado pelo motor**. Todo texto do tutor leva a etiqueta **IA**.
+- A chave é **sua** e fica só neste navegador (IndexedDB), legível para quem o usa. Ela **não entra no backup** e é apagada por "Remover chave" e por "Apagar dados locais". Crie uma chave só para o Chess Lab e remova-a em computador compartilhado.
+- No plano gratuito o Google pode usar o conteúdo enviado para melhorar os produtos dele. O envio inclui a posição (FEN), lances, avaliações do motor, seu nível estimado e o texto da pergunta e das últimas mensagens desta conversa. Não escreva dados pessoais nas perguntas.
+- Há um **modelo principal** e um **modelo reserva**, escolhidos entre os que a API lista para a sua chave. Cada resposta custa normalmente 1 pedido (2 quando a reserva entra ou a revisão precisa de nova tentativa); o reserva só entra se o principal atingir o limite, ficar indisponível, falhar no servidor ou demorar demais. Chave ou pedido recusado não aciona o reserva. Se nenhum modelo foi escolhido, o tutor aplica o padrão (o flash estável mais novo e o flash-lite como reserva) na primeira pergunta. Limites e modelos gratuitos mudam a critério do Google.
+- Lances citados na resposta são conferidos: os confirmados pelo motor são clicáveis e desenham a seta; os demais lances aparecem como **não confirmado pelo motor**; casas citadas na prosa ("a casa d4") ficam como texto. Todo texto do tutor leva a etiqueta **IA**.
 
 ### Limites
 

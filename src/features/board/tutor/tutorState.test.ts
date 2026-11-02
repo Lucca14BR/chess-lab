@@ -5,7 +5,7 @@ import { db, type TutorMessage } from '@/lib/db/schema';
 import type { AnalysisResult } from '@/lib/engine/stockfish';
 import { threadIds } from '@/lib/tutor/key';
 import { clearTutorCache, type TutorDeps } from '@/lib/tutor/service';
-import { askInPosition, saveReply, tutorBusy, tutorStore } from './tutorState';
+import { askInPosition, resetTutorUi, saveReply, tutorBusy, tutorStore } from './tutorState';
 
 const analysis = (fen: string): AnalysisResult => ({ fen, depth: 10, bestMove: 'e2e4', lines: [{ multipv: 1, depth: 10, cp: 20, mate: null, pv: ['e2e4'] }] });
 
@@ -57,5 +57,11 @@ describe('tutorState', () => {
     expect(b).toBeNull();
     expect(await saveReply(msg)).toBe(a);
     expect(await db.notes.count()).toBe(1);
+  });
+
+  it('apagar os dados locais limpa notas e erros do store', () => {
+    tutorStore.set({ errors: { [thread]: { question: 'q', message: 'm' } }, notes: { m1: 'n1' } });
+    resetTutorUi();
+    expect(tutorStore.get()).toMatchObject({ errors: {}, notes: {} });
   });
 });

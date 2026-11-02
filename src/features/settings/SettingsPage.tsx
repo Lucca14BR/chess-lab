@@ -8,6 +8,7 @@ import { syncStore, syncAccount, cancelSync, disconnectAccount } from '@/lib/che
 import { chessCom } from '@/lib/chesscom/client';
 import { BOARD_THEMES, PIECE_SETS, applyTheme, getTheme, setSetting, useSettings, type ThemeMode } from '@/lib/settings';
 import { exportBackup, importBackup, clearAllData, storageSummary } from '@/lib/services/backup';
+import { resetTutorUi } from '@/features/board/tutor/tutorState';
 import { Page, PageHeader } from '@/components/ui/Page';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -336,9 +337,10 @@ function DataSection() {
     }
   };
   const doClear = async () => {
-    const ok = await confirm({ title: 'Apagar todos os dados locais?', message: 'Notas, posições, progresso, treinos, partidas importadas e configurações serão apagados deste navegador. Exporte um backup antes se quiser guardá-los. Esta ação não pode ser desfeita.', confirmLabel: 'Apagar tudo', danger: true });
+    const ok = await confirm({ title: 'Apagar todos os dados locais?', message: 'Notas, posições, progresso, treinos, partidas importadas, configurações e a chave do Gemini serão apagados deste navegador. Exporte um backup antes se quiser guardá-los. Esta ação não pode ser desfeita.', confirmLabel: 'Apagar tudo', danger: true });
     if (!ok) return;
     await clearAllData();
+    resetTutorUi();
     toast('Dados locais apagados.');
     setSummary(await storageSummary());
   };
