@@ -4,6 +4,8 @@ import { db } from '@/lib/db/schema';
 export type ThemeMode = 'dark' | 'light';
 export type BoardTheme = 'nogueira' | 'marfim' | 'musgo' | 'ardosia' | 'ebano';
 export type PieceSet = 'cburnett' | 'merida' | 'staunty' | 'chessnut';
+export type SfxSet = 'sfx' | 'piano' | 'nes' | 'futuristic';
+export type AmbientType = 'none' | 'calm' | 'heavy';
 
 export interface Settings {
   displayName: string;
@@ -22,6 +24,19 @@ export interface Settings {
   tutorPrimaryModel: string | null; // modelo do tutor de IA (null = padrão)
   tutorFallbackModel: string | null;
   welcomeDismissed: boolean; // "Agora não" no cartão de boas-vindas do Painel
+  // Som (volumes de 0 a 1)
+  masterVolume: number;
+  sfxEnabled: boolean;
+  sfxSet: SfxSet;
+  sfxVolume: number;
+  sfxOnNavigate: boolean; // tocar ao andar pelo histórico de lances
+  musicEnabled: boolean;
+  musicVolume: number;
+  musicShuffle: boolean;
+  ambientType: AmbientType;
+  ambientThunder: boolean;
+  ambientVolume: number;
+  audioAutostart: boolean; // música e ambiente começam sozinhos (na primeira interação)
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -41,6 +56,18 @@ export const DEFAULT_SETTINGS: Settings = {
   tutorPrimaryModel: null,
   tutorFallbackModel: null,
   welcomeDismissed: false,
+  masterVolume: 0.8,
+  sfxEnabled: true,
+  sfxSet: 'sfx',
+  sfxVolume: 0.7,
+  sfxOnNavigate: true,
+  musicEnabled: false,
+  musicVolume: 0.4,
+  musicShuffle: false,
+  ambientType: 'none',
+  ambientThunder: false,
+  ambientVolume: 0.5,
+  audioAutostart: false,
 };
 
 export const BOARD_THEMES: Array<{ id: BoardTheme; label: string; light: string; dark: string }> = [
@@ -60,6 +87,11 @@ export const PIECE_SETS: Array<{ id: PieceSet; label: string; author: string; li
 
 export async function setSetting<K extends keyof Settings>(key: K, value: Settings[K]) {
   await db.settings.put({ key, value });
+}
+
+/** Grava várias configurações de uma vez (uma única atualização para quem observa). */
+export async function setSettings(patch: Partial<Settings>) {
+  await db.settings.bulkPut(Object.entries(patch).map(([key, value]) => ({ key, value })));
 }
 
 export function useSettings(): Settings {

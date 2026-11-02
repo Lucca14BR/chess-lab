@@ -1,6 +1,7 @@
 import { db } from '@/lib/db/schema';
 
-// 'secrets' fica de fora de propósito: a chave da IA nunca vai para o backup
+// 'secrets' fica de fora de propósito: a chave da IA nunca vai para o backup.
+// 'musicTracks' também: são arquivos de áudio grandes, que ficam só neste navegador.
 const TABLES = ['account', 'archives', 'games', 'ownGames', 'analyses', 'positions', 'notes', 'collections', 'puzzleAttempts', 'puzzleFavorites', 'lessonProgress', 'repertoire', 'openingNotes', 'sessions', 'templates', 'planned', 'goals', 'activity', 'settings', 'tutorMessages'] as const;
 
 export async function exportBackup(): Promise<string> {
@@ -31,10 +32,11 @@ export async function importBackup(json: string): Promise<number> {
 }
 
 export async function clearAllData() {
-  // 'secrets' (chave da IA) fica fora do backup, mas é apagada junto com os dados
-  await db.transaction('rw', [...TABLES.map((t) => db.table(t)), db.secrets], async () => {
+  // 'secrets' (chave da IA) e 'musicTracks' ficam fora do backup, mas são apagadas junto com os dados
+  await db.transaction('rw', [...TABLES.map((t) => db.table(t)), db.secrets, db.musicTracks], async () => {
     for (const t of TABLES) await db.table(t).clear();
     await db.secrets.clear();
+    await db.musicTracks.clear();
   });
 }
 

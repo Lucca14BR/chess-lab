@@ -304,6 +304,48 @@ export interface SecretRow {
   value: string;
 }
 
+/** Música adicionada pela pessoa (o arquivo fica só neste navegador; fora do backup). */
+export interface MusicTrackRow {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  addedAt: number;
+  blob: Blob;
+}
+
+export const STORES_V1 = {
+  account: 'id',
+  archives: 'url, username, [year+month]',
+  games: 'id, username, endTime, timeClass, userColor, result, openingFamily, archive',
+  ownGames: 'id, createdAt, updatedAt',
+  analyses: 'id, kind, gameId, createdAt',
+  positions: 'id, createdAt, favorite, source',
+  notes: 'id, updatedAt, category, favorite, isMistake, *collectionIds, *tags',
+  collections: 'id, name',
+  puzzleAttempts: 'id, puzzleId, category, level, date, solved',
+  puzzleFavorites: 'puzzleId, addedAt',
+  lessonProgress: 'lessonId, status, updatedAt',
+  repertoire: 'id, color, openingId, updatedAt',
+  openingNotes: 'key',
+  sessions: 'id, startedAt',
+  templates: 'id, createdAt',
+  planned: 'id, day, done',
+  goals: 'id, week, active',
+  activity: 'id, date, kind',
+  settings: 'key',
+};
+
+// Versões seguintes: só as tabelas novas (o Dexie mantém as anteriores)
+export const STORES_V2 = {
+  tutorMessages: 'id, threadId, createdAt',
+  secrets: 'key',
+};
+
+export const STORES_V3 = {
+  musicTracks: 'id, addedAt',
+};
+
 export class ChessLabDB extends Dexie {
   declare account: EntityTable<AccountRow, 'id'>;
   declare archives: EntityTable<ArchiveRow, 'url'>;
@@ -326,35 +368,13 @@ export class ChessLabDB extends Dexie {
   declare settings: EntityTable<SettingRow, 'key'>;
   declare tutorMessages: EntityTable<TutorMessage, 'id'>;
   declare secrets: EntityTable<SecretRow, 'key'>;
+  declare musicTracks: EntityTable<MusicTrackRow, 'id'>;
 
   constructor(name = 'chess-lab') {
     super(name);
-    this.version(1).stores({
-      account: 'id',
-      archives: 'url, username, [year+month]',
-      games: 'id, username, endTime, timeClass, userColor, result, openingFamily, archive',
-      ownGames: 'id, createdAt, updatedAt',
-      analyses: 'id, kind, gameId, createdAt',
-      positions: 'id, createdAt, favorite, source',
-      notes: 'id, updatedAt, category, favorite, isMistake, *collectionIds, *tags',
-      collections: 'id, name',
-      puzzleAttempts: 'id, puzzleId, category, level, date, solved',
-      puzzleFavorites: 'puzzleId, addedAt',
-      lessonProgress: 'lessonId, status, updatedAt',
-      repertoire: 'id, color, openingId, updatedAt',
-      openingNotes: 'key',
-      sessions: 'id, startedAt',
-      templates: 'id, createdAt',
-      planned: 'id, day, done',
-      goals: 'id, week, active',
-      activity: 'id, date, kind',
-      settings: 'key',
-    });
-    // Versão 2: só as tabelas novas (o Dexie mantém as da versão 1)
-    this.version(2).stores({
-      tutorMessages: 'id, threadId, createdAt',
-      secrets: 'key',
-    });
+    this.version(1).stores(STORES_V1);
+    this.version(2).stores(STORES_V2);
+    this.version(3).stores(STORES_V3);
   }
 }
 
