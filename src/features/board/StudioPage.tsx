@@ -9,6 +9,7 @@ import { buildPgn, parsePgn, replayMainline, splitPgn } from '@/lib/chess/pgn';
 import type { EngineLine } from '@/lib/engine/stockfish';
 import { useSettings } from '@/lib/settings';
 import { logActivity } from '@/lib/services/activity';
+import { ownGameRecord } from '@/lib/ownGames';
 import { Page, PageHeader, Tabs } from '@/components/ui/Page';
 import { Card } from '@/components/ui/Card';
 import { Button, ButtonLink } from '@/components/ui/Button';
@@ -322,7 +323,7 @@ function SaveGameButton({ pgn, ownId, onSaved, defaultTitle }: { pgn: () => stri
     const now = Date.now();
     const id = ownId ?? uid();
     const existing = ownId ? await db.ownGames.get(ownId) : undefined;
-    await db.ownGames.put({ id, title: title.trim() || 'Partida sem título', pgn: text, white: g.headers.White ?? '?', black: g.headers.Black ?? '?', result: g.result, source: 'studio', createdAt: existing?.createdAt ?? now, updatedAt: now });
+    await db.ownGames.put(ownGameRecord(existing, { id, title: title.trim() || 'Partida sem título', pgn: text, white: g.headers.White ?? '?', black: g.headers.Black ?? '?', result: g.result }, now));
     onSaved(id);
     setOpen(false);
     toast('Partida salva em “Minhas partidas”.', 'positive');
