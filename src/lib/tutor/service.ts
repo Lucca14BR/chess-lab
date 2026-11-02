@@ -49,6 +49,9 @@ async function defaultLevel(): Promise<TutorLevel> {
   return levelFromStats((await db.account.get('chesscom'))?.stats)
 }
 
+// Fase do pedido, para a tela: motor rodando ou esperando o Gemini
+export type TutorPhase = 'analyzing' | 'consulting'
+
 const resolveDeps = (deps: Partial<TutorDeps>): TutorDeps => ({
   analyze: defaultAnalyze,
   generate: defaultGenerate,
@@ -63,10 +66,11 @@ export function clearTutorCache(): void {
   cache.clear()
 }
 
-function cachedAnalyze(deps: TutorDeps, fen: string): Promise<AnalysisResult> {
+function cachedAnalyze(deps: TutorDeps, fen: string, onPhase?: (p: TutorPhase) => void): Promise<AnalysisResult> {
   const key = positionKey(fen)
   let hit = cache.get(key)
   if (!hit) {
+    onPhase?.('analyzing') // só quando o motor precisa rodar
     hit = deps.analyze(fen)
     cache.set(key, hit)
     hit.catch(() => cache.delete(key)) // falha não fica guardada
@@ -92,11 +96,11 @@ function mentionedMoves(question: string, fen: string): Array<{ san: string; uci
   return [...seen.values()]
 }
 
-async function askedWithEngine(deps: TutorDeps, fen: string, question: string) {
+async function askedWithEngine(deps: TutorDeps, fen: string, question: string, onPhase?: (p: TutorPhase) => void) {
   const asked: Array<{ san: string; uci: string; engine: AnalysisResult | null }> = []
   for (const m of mentionedMoves(question, fen)) {
     const after = fenAfterUci(fen, m.uci)
-    asked.push({ ...m, engine: after ? await cachedAnalyze(deps, after) : null })
+    asked.push({ ...m, engine: after ? await cachedAnalyze(deps, after, onPhase) : null })
   }
   return asked
 }
@@ -104,9 +108,11 @@ async function askedWithEngine(deps: TutorDeps, fen: string, question: string) {
 export async function askTutor(
   input: { fen: string; played: AnalyzedMove | null; question: string },
   deps: Partial<TutorDeps> = {},
+  options: { onPhase?: (p: TutorPhase) => void } = {},
 ): Promise<TutorMessage> {
   const d = resolveDeps(deps)
   const { fen, played, question } = input
+  const { onPhase } = options
   const threadId = threadIds.position(fen)
 
   // Histórico = mensagens anteriores do mesmo fio, da mais antiga para a mais nova
@@ -128,11 +134,13 @@ export async function askTutor(
 
   const facts = buildFacts({
     fen,
-    engine: await cachedAnalyze(d, fen),
+    engine: await cachedAnalyze(d, fen, onPhase),
     played,
-    asked: await askedWithEngine(d, fen, question),
+    asked: await askedWithEngine(d, fen, question, onPhase),
   })
-  const result = await d.generate(chatRequest(facts, history, question, await d.level()))
+  const level = await d.level()
+  onPhase?.('consulting')
+  const result = await d.generate(chatRequest(facts, history, question, level))
 
   const reply: TutorMessage = {
     id: uid(),

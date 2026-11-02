@@ -96,6 +96,19 @@ describe('askTutor', () => {
     expect(analyze.mock.calls.filter((c) => c[0] === START)).toHaveLength(1)
   })
 
+  it('avisa as fases: analisando só sem cache, depois consultando', async () => {
+    const { deps } = makeDeps()
+    const first: string[] = []
+    await askTutor({ fen: START, played: null, question: 'Primeira?' }, deps, { onPhase: (p) => first.push(p) })
+    expect(first).toEqual(['analyzing', 'consulting'])
+    const second: string[] = []
+    await askTutor({ fen: START, played: null, question: 'Segunda?' }, deps, { onPhase: (p) => second.push(p) })
+    expect(second).toEqual(['consulting'])
+    const cited: string[] = []
+    await askTutor({ fen: START, played: null, question: 'e se Cf3?' }, deps, { onPhase: (p) => cited.push(p) })
+    expect(cited).toEqual(['analyzing', 'consulting']) // só o lance citado precisa do motor
+  })
+
   it('posições diferentes têm fios diferentes', async () => {
     const { deps } = makeDeps()
     await askTutor({ fen: START, played: null, question: 'A?' }, deps)

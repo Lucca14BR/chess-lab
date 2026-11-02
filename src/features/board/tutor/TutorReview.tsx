@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { MessageCircleQuestion, RotateCcw, Sparkles } from 'lucide-react';
 import { db, type GameAnalysis } from '@/lib/db/schema';
-import { generateReview } from '@/lib/tutor/service';
 import { threadIds, useHasGeminiKey } from '@/lib/tutor/key';
-import { geminiErrorMessage } from '@/lib/ai/gemini';
+import { useStore } from '@/lib/store';
 import { MOVE_CLASS_LABEL } from '@/lib/engine/gameAnalysis';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { SourceTag } from '@/components/ui/Badge';
@@ -12,6 +11,7 @@ import { Alert, Spinner } from '@/components/ui/Feedback';
 import { Segmented } from '@/components/ui/Form';
 import { cn } from '@/lib/utils';
 import { TutorText } from './TutorText';
+import { reviewGame, tutorStore } from './tutorState';
 
 type Color = 'white' | 'black';
 
@@ -20,26 +20,17 @@ const CLASS_TONE = { blunder: 'text-negative', mistake: 'text-[#d38b4a]', inaccu
 /** Revisão do tutor: momentos decisivos da partida analisada, explicados pela IA. */
 export function TutorReview({ analysis, userColor, onGo, onAsk }: { analysis: GameAnalysis; userColor: Color | undefined; onGo: (cursor: number) => void; onAsk: (cursor: number) => void }) {
   const hasKey = useHasGeminiKey();
-  const review = useLiveQuery(() => db.tutorMessages.where('threadId').equals(threadIds.review(analysis.id)).first(), [analysis.id]);
+  const thread = threadIds.review(analysis.id);
+  const review = useLiveQuery(() => db.tutorMessages.where('threadId').equals(thread).first(), [thread]);
   const [pick, setPick] = useState<Color>('white');
-  // Pedido e erro guardados com o id da análise, para não vazarem para outra partida
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<{ id: string; message: string } | null>(null);
+  // Pedido e erro vêm do store, pela conversa desta análise: sobrevivem à troca de aba
+  const { pending, errors } = useStore(tutorStore);
   const color = userColor ?? pick;
-  const running = busy === analysis.id;
+  const running = !!pending[thread];
+  const disabled = Object.keys(pending).length > 0; // um pedido por vez no app
+  const error = errors[thread];
 
-  const run = async () => {
-    const id = analysis.id;
-    setBusy(id);
-    setError(null);
-    try {
-      await generateReview(analysis, color);
-    } catch (e) {
-      setError({ id, message: geminiErrorMessage(e) });
-    } finally {
-      setBusy((b) => (b === id ? null : b));
-    }
-  };
+  const run = () => void reviewGame(analysis, color);
 
   const data = review?.review;
 
@@ -51,7 +42,7 @@ export function TutorReview({ analysis, userColor, onGo, onAsk }: { analysis: Ga
           <Segmented size="sm" value={pick} onChange={setPick} ariaLabel="Cor revisada" options={[{ value: 'white', label: 'Revisar como Brancas' }, { value: 'black', label: 'Revisar como Pretas' }]} />
         )}
         {hasKey && (
-          <Button size="sm" variant={data ? 'secondary' : 'primary'} onClick={() => void run()} disabled={running}>
+          <Button size="sm" variant={data ? 'secondary' : 'primary'} onClick={run} disabled={disabled}>
             {running ? <Spinner /> : data ? <RotateCcw /> : <Sparkles />} {data ? 'Gerar de novo' : 'Revisão do tutor'}
           </Button>
         )}
@@ -65,11 +56,11 @@ export function TutorReview({ analysis, userColor, onGo, onAsk }: { analysis: Ga
         </p>
       )}
       {running && <p className="text-xs text-ink-muted">Consultando o tutor… a revisão analisa cada momento com o Stockfish antes.</p>}
-      {error?.id === analysis.id && (
+      {error && (
         <Alert
           tone="negative"
           action={
-            <Button size="sm" onClick={() => void run()} disabled={running}>
+            <Button size="sm" onClick={run} disabled={disabled}>
               <RotateCcw /> Tentar de novo
             </Button>
           }

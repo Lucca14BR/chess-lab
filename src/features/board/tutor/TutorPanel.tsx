@@ -2,26 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { BookmarkPlus, NotebookPen, RotateCcw, Send, Sparkles } from 'lucide-react';
 import { db, type AnalyzedMove, type TutorMessage } from '@/lib/db/schema';
-import { askTutor, saveToNotebook } from '@/lib/tutor/service';
 import { threadIds, useHasGeminiKey } from '@/lib/tutor/key';
-import { geminiErrorMessage } from '@/lib/ai/gemini';
-import { engine } from '@/lib/engine/stockfish';
-import { getSettings } from '@/lib/settings';
+import { useStore } from '@/lib/store';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { SourceTag } from '@/components/ui/Badge';
 import { Alert, EmptyState, Spinner } from '@/components/ui/Feedback';
 import { Textarea } from '@/components/ui/Form';
 import { toast } from '@/components/ui/Dialog';
 import { TutorText } from './TutorText';
-
-type Phase = 'analyzing' | 'consulting';
-
-// Cópia do objeto sem a chave
-function without<T>(o: Record<string, T>, key: string): Record<string, T> {
-  const next = { ...o };
-  delete next[key];
-  return next;
-}
+import { askInPosition, saveReply, tutorStore } from './tutorState';
 
 const QUICK = {
   plan: 'Qual é o plano aqui?',
@@ -34,16 +23,14 @@ export function TutorPanel({ fen, played, onShowMove }: { fen: string; played: A
   const hasKey = useHasGeminiKey();
   const thread = threadIds.position(fen);
   const messages = useLiveQuery(() => db.tutorMessages.where('threadId').equals(thread).sortBy('createdAt'), [thread]);
+  // Pedido, erro e notas salvas vêm do store: continuam certos ao trocar de aba ou de posição
+  const { pending, errors, notes } = useStore(tutorStore);
   const [draft, setDraft] = useState('');
-  // Pedido em andamento e erro ficam por conversa: ao voltar a uma posição, aparece o estado dela
-  const [pending, setPending] = useState<Record<string, Phase>>({});
-  const [errors, setErrors] = useState<Record<string, { question: string; message: string }>>({});
-  const [saved, setSaved] = useState<Record<string, string>>({});
   const listRef = useRef<HTMLDivElement>(null);
-  const inFlight = useRef(false); // um pedido por vez, mesmo com clique duplo
 
   const busyHere = pending[thread];
-  const busyElsewhere = !busyHere && Object.keys(pending).length > 0;
+  const disabled = Object.keys(pending).length > 0;
+  const busyElsewhere = !busyHere && disabled;
   const error = errors[thread];
 
   // Rola até a última mensagem
@@ -51,55 +38,17 @@ export function TutorPanel({ fen, played, onShowMove }: { fen: string; played: A
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
   }, [messages?.length, busyHere, thread]);
 
-  const ask = async (question: string, retry = false) => {
-    const q = question.trim();
-    if (!q || inFlight.current) return;
-    inFlight.current = true;
-    const t = thread;
-    const setPhase = (p: Phase | null) => setPending((s) => (p ? { ...s, [t]: p } : without(s, t)));
-    setErrors((s) => without(s, t));
-    setPhase('consulting');
-    try {
-      // Nova tentativa: tira a pergunta que ficou sem resposta para não duplicá-la
-      if (retry) {
-        const last = (await db.tutorMessages.where('threadId').equals(t).sortBy('createdAt')).at(-1);
-        if (last?.role === 'user' && last.text === q) await db.tutorMessages.delete(last.id);
-      }
-      await askTutor(
-        { fen, played, question: q },
-        {
-          // Mesmo motor do serviço; só marca o estado "Analisando posição…" enquanto o Stockfish roda
-          analyze: async (f) => {
-            setPhase('analyzing');
-            try {
-              const { engineDepth } = await getSettings();
-              return await engine.analyze(f, { depth: engineDepth, multiPv: 3 });
-            } finally {
-              setPhase('consulting');
-            }
-          },
-        },
-      );
-    } catch (e) {
-      setErrors((s) => ({ ...s, [t]: { question: q, message: geminiErrorMessage(e) } }));
-    } finally {
-      inFlight.current = false;
-      setPhase(null);
-    }
-  };
+  const ask = (question: string, retry = false) => void askInPosition({ fen, played, question }, retry);
 
   const submit = () => {
-    const q = draft;
-    if (!q.trim() || inFlight.current) return;
+    if (!draft.trim() || disabled) return;
+    ask(draft);
     setDraft('');
-    void ask(q);
   };
 
   const save = async (msg: TutorMessage) => {
     try {
-      const id = await saveToNotebook(msg);
-      setSaved((s) => ({ ...s, [msg.id]: id }));
-      toast('Explicação salva no Caderno.', 'positive');
+      if (await saveReply(msg)) toast('Explicação salva no Caderno.', 'positive');
     } catch {
       toast('Não foi possível salvar no Caderno.', 'negative');
     }
@@ -118,7 +67,6 @@ export function TutorPanel({ fen, played, onShowMove }: { fen: string; played: A
     );
   }
 
-  const disabled = Object.keys(pending).length > 0;
   const quick = [QUICK.plan, ...(played ? [QUICK.played] : []), QUICK.threats];
 
   return (
@@ -137,8 +85,8 @@ export function TutorPanel({ fen, played, onShowMove }: { fen: string; played: A
                 <SourceTag source="ai" />
                 {m.model && <span className="font-mono text-[10.5px] text-ink-faint">{m.model}</span>}
                 <span className="ml-auto">
-                  {saved[m.id] ? (
-                    <ButtonLink size="sm" variant="ghost" to={`/caderno?nota=${saved[m.id]}`}>
+                  {notes[m.id] ? (
+                    <ButtonLink size="sm" variant="ghost" to={`/caderno?nota=${notes[m.id]}`}>
                       <NotebookPen /> Abrir nota
                     </ButtonLink>
                   ) : (
@@ -161,7 +109,7 @@ export function TutorPanel({ fen, played, onShowMove }: { fen: string; played: A
         <Alert
           tone="negative"
           action={
-            <Button size="sm" onClick={() => void ask(error.question, true)} disabled={disabled}>
+            <Button size="sm" onClick={() => ask(error.question, true)} disabled={disabled}>
               <RotateCcw /> Tentar de novo
             </Button>
           }
@@ -171,7 +119,7 @@ export function TutorPanel({ fen, played, onShowMove }: { fen: string; played: A
       )}
       <div className="flex flex-wrap gap-1.5">
         {quick.map((q) => (
-          <Button key={q} size="sm" onClick={() => void ask(q)} disabled={disabled}>
+          <Button key={q} size="sm" onClick={() => ask(q)} disabled={disabled}>
             {q}
           </Button>
         ))}
@@ -200,7 +148,7 @@ export function TutorPanel({ fen, played, onShowMove }: { fen: string; played: A
           <Send />
         </Button>
       </form>
-      {busyElsewhere && <p className="text-[11px] text-ink-faint">O tutor ainda está respondendo sobre outra posição.</p>}
+      {busyElsewhere && <p className="text-[11px] text-ink-faint">O tutor ainda está respondendo a outro pedido.</p>}
     </div>
   );
 }

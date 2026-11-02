@@ -107,3 +107,8 @@ export const MOVE_CLASS_LABEL: Record<MoveClass, string> = {
   mistake: 'Erro',
   blunder: 'Erro grave',
 };
+
+/** A análise vale para estes lances? (mesma sequência de UCI, não só o mesmo tamanho) */
+export function analysisMatches(analysis: GameAnalysis | null, moves: ReadonlyArray<{ uci: string }>): boolean {
+  return !!analysis && analysis.moves.length === moves.length && analysis.moves.every((m, i) => m.uci === moves[i].uci);
+}

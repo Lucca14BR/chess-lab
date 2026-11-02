@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis, type TooltipContentProps } from 'recharts';
 import { Activity, Square } from 'lucide-react';
 import { db, type GameAnalysis } from '@/lib/db/schema';
-import { analyzeGame, MOVE_CLASS_LABEL } from '@/lib/engine/gameAnalysis';
+import { analysisMatches, analyzeGame, MOVE_CLASS_LABEL } from '@/lib/engine/gameAnalysis';
 import { engine } from '@/lib/engine/stockfish';
 import type { HistMove } from '@/lib/chess/useGameHistory';
 import { logActivity } from '@/lib/services/activity';
@@ -72,7 +72,7 @@ export function GameAnalysisPanel({ startFen, moves, gameRef, depth, analysis, o
 
   const chart = analysis?.moves.map((m) => ({ ply: m.ply, san: m.san, cp: Math.max(-1000, Math.min(1000, m.evalAfter)) })) ?? [];
   const critical = analysis?.moves.filter((m) => m.classification === 'blunder' || m.classification === 'mistake' || m.classification === 'inaccuracy') ?? [];
-  const stale = analysis && analysis.moves.length !== moves.length;
+  const stale = analysis && !analysisMatches(analysis, moves);
 
   return (
     <div className="space-y-4">

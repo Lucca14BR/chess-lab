@@ -19,6 +19,7 @@ import { ChessBoard, type Promotion } from '@/components/board/ChessBoard';
 import { MoveList } from './MoveList';
 import { EnginePanel, EvalBar } from './EnginePanel';
 import { GameAnalysisPanel, type GameRef } from './GameAnalysisPanel';
+import { analysisMatches } from '@/lib/engine/gameAnalysis';
 import { TutorPanel } from './tutor/TutorPanel';
 import { copyToClipboard, downloadText, formatDate, readFileAsText, uid } from '@/lib/utils';
 
@@ -43,10 +44,7 @@ export default function StudioPage() {
   const [headers, setHeaders] = useState<Record<string, string>>({});
   const [ownId, setOwnId] = useState<string | null>(null);
   const [syncToken, setSyncToken] = useState(0);
-  const [tutorArrow, setTutorArrow] = useState<string | null>(null); // lance clicado no texto do tutor (UCI)
-
-  // A seta do tutor vale só para a posição em que foi pedida
-  useEffect(() => setTutorArrow(null), [h.fen]);
+  const [tutorArrow, setTutorArrow] = useState<{ fen: string; uci: string } | null>(null); // lance clicado no texto do tutor
 
   const loadPgnText = useCallback(
     (text: string, ref: GameRef | null, ownGameId: string | null = null) => {
@@ -135,13 +133,14 @@ export default function StudioPage() {
     const a: Array<{ from: string; to: string; brush: 'green' | 'red' | 'blue' }> = [];
     const best = engineLines?.[0]?.pv[0];
     if (best) a.push({ from: best.slice(0, 2), to: best.slice(2, 4), brush: 'green' });
-    const am = analysis && analysis.moves.length === h.moves.length && h.cursor > 0 ? analysis.moves[h.cursor - 1] : null;
+    const am = analysis && analysisMatches(analysis, h.moves) && h.cursor > 0 ? analysis.moves[h.cursor - 1] : null;
     if (am && (am.classification === 'mistake' || am.classification === 'blunder' || am.classification === 'inaccuracy') && am.bestUci) {
       a.push({ from: am.bestUci.slice(0, 2), to: am.bestUci.slice(2, 4), brush: 'blue' });
     }
-    if (tutorArrow) a.push({ from: tutorArrow.slice(0, 2), to: tutorArrow.slice(2, 4), brush: 'blue' });
+    // A seta do tutor vale só na posição em que o lance foi clicado
+    if (tutorArrow?.fen === h.fen) a.push({ from: tutorArrow.uci.slice(0, 2), to: tutorArrow.uci.slice(2, 4), brush: 'blue' });
     return a;
-  }, [engineLines, analysis, h.cursor, h.moves.length, tutorArrow]);
+  }, [engineLines, analysis, h.cursor, h.moves, h.fen, tutorArrow]);
 
   const currentPgn = () => {
     const c = h.chess;
@@ -163,7 +162,8 @@ export default function StudioPage() {
   };
 
   const lastMove = h.current ? ([h.current.from, h.current.to] as [string, string]) : null;
-  const currentAnalysis = analysis && h.cursor > 0 && analysis.moves.length === h.moves.length ? analysis.moves[h.cursor - 1] : null;
+  const analysisCurrent = analysis && analysisMatches(analysis, h.moves) ? analysis : null; // análise dos lances atuais
+  const currentAnalysis = analysisCurrent && h.cursor > 0 ? analysisCurrent.moves[h.cursor - 1] : null;
 
   return (
     <Page>
@@ -249,7 +249,7 @@ export default function StudioPage() {
                   </Button>
                 </div>
               </div>
-              <MoveList startFen={h.startFen} moves={h.moves} cursor={h.cursor} onGo={h.goTo} notation={notation} analysis={analysis && analysis.moves.length === h.moves.length ? analysis.moves : null} />
+              <MoveList startFen={h.startFen} moves={h.moves} cursor={h.cursor} onGo={h.goTo} notation={notation} analysis={analysisCurrent?.moves ?? null} />
               {h.canRedo && (
                 <Button size="sm" variant="ghost" onClick={h.truncate}>
                   <Scissors /> Apagar lances após a posição atual
@@ -262,7 +262,7 @@ export default function StudioPage() {
           )}
           {side === 'motor' && <EnginePanel fen={h.fen} depth={settings.engineDepth} onLines={setEngineLines} onPlayPv={(sans) => sans[0] && h.playSan(sans[0])} />}
           {side === 'analise' && <GameAnalysisPanel startFen={h.startFen} moves={h.moves} gameRef={gameRef} depth={settings.analysisDepth} analysis={analysis} onAnalysis={setAnalysis} onGo={h.goTo} onAsk={(cursor) => { h.goTo(cursor); setSide('tutor'); }} />}
-          {side === 'tutor' && <TutorPanel fen={h.fen} played={currentAnalysis} onShowMove={setTutorArrow} />}
+          {side === 'tutor' && <TutorPanel fen={h.fen} played={currentAnalysis} onShowMove={(uci) => setTutorArrow({ fen: h.fen, uci })} />}
           {side === 'salvos' && <SavedPanel fen={h.fen} onLoadFen={(f) => { h.reset(f); setGameRef(null); setAnalysis(null); }} onLoadOwn={(id) => setParams({ propria: id })} />}
           {side === 'pgn' && <PgnPanel getPgn={currentPgn} onImport={(text) => loadPgnText(text, null)} />}
         </Card>
