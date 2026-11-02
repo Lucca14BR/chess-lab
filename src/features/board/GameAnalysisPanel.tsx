@@ -11,6 +11,7 @@ import { Alert, ProgressBar } from '@/components/ui/Feedback';
 import { SourceTag } from '@/components/ui/Badge';
 import { TooltipBox } from '@/components/charts/Charts';
 import { cn, formatDateTime } from '@/lib/utils';
+import { TutorReview } from './tutor/TutorReview';
 
 export interface GameRef {
   kind: GameAnalysis['kind'];
@@ -29,7 +30,7 @@ function EvalTooltip({ active, payload }: TooltipContentProps) {
   );
 }
 
-export function GameAnalysisPanel({ startFen, moves, gameRef, depth, analysis, onAnalysis, onGo }: { startFen: string; moves: HistMove[]; gameRef: GameRef | null; depth: number; analysis: GameAnalysis | null; onAnalysis: (a: GameAnalysis | null) => void; onGo: (cursor: number) => void }) {
+export function GameAnalysisPanel({ startFen, moves, gameRef, depth, analysis, onAnalysis, onGo, onAsk }: { startFen: string; moves: HistMove[]; gameRef: GameRef | null; depth: number; analysis: GameAnalysis | null; onAnalysis: (a: GameAnalysis | null) => void; onGo: (cursor: number) => void; onAsk: (cursor: number) => void }) {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
@@ -151,6 +152,7 @@ export function GameAnalysisPanel({ startFen, moves, gameRef, depth, analysis, o
           <p className="text-[11px] text-ink-faint">
             <SourceTag source="calc" /> {analysis.engine}, prof. {analysis.depth}, {formatDateTime(analysis.createdAt)}. Precisão e classificações são estimativas do Chess Lab, não números oficiais do Chess.com.
           </p>
+          {!stale && <TutorReview analysis={analysis} userColor={gameRef?.userColor} onGo={onGo} onAsk={onAsk} />}
         </>
       )}
     </div>

@@ -19,9 +19,10 @@ import { ChessBoard, type Promotion } from '@/components/board/ChessBoard';
 import { MoveList } from './MoveList';
 import { EnginePanel, EvalBar } from './EnginePanel';
 import { GameAnalysisPanel, type GameRef } from './GameAnalysisPanel';
+import { TutorPanel } from './tutor/TutorPanel';
 import { copyToClipboard, downloadText, formatDate, readFileAsText, uid } from '@/lib/utils';
 
-type Side = 'lances' | 'motor' | 'analise' | 'salvos' | 'pgn';
+type Side = 'lances' | 'motor' | 'tutor' | 'analise' | 'salvos' | 'pgn';
 
 function toHist(startFen: string, pgnText: string): { startFen: string; moves: HistMove[]; error: string | null; headers: Record<string, string> } {
   const game = parsePgn(pgnText);
@@ -42,6 +43,10 @@ export default function StudioPage() {
   const [headers, setHeaders] = useState<Record<string, string>>({});
   const [ownId, setOwnId] = useState<string | null>(null);
   const [syncToken, setSyncToken] = useState(0);
+  const [tutorArrow, setTutorArrow] = useState<string | null>(null); // lance clicado no texto do tutor (UCI)
+
+  // A seta do tutor vale só para a posição em que foi pedida
+  useEffect(() => setTutorArrow(null), [h.fen]);
 
   const loadPgnText = useCallback(
     (text: string, ref: GameRef | null, ownGameId: string | null = null) => {
@@ -134,8 +139,9 @@ export default function StudioPage() {
     if (am && (am.classification === 'mistake' || am.classification === 'blunder' || am.classification === 'inaccuracy') && am.bestUci) {
       a.push({ from: am.bestUci.slice(0, 2), to: am.bestUci.slice(2, 4), brush: 'blue' });
     }
+    if (tutorArrow) a.push({ from: tutorArrow.slice(0, 2), to: tutorArrow.slice(2, 4), brush: 'blue' });
     return a;
-  }, [engineLines, analysis, h.cursor, h.moves.length]);
+  }, [engineLines, analysis, h.cursor, h.moves.length, tutorArrow]);
 
   const currentPgn = () => {
     const c = h.chess;
@@ -224,6 +230,7 @@ export default function StudioPage() {
             tabs={[
               { value: 'lances', label: 'Lances' },
               { value: 'motor', label: 'Motor' },
+              { value: 'tutor', label: 'Tutor' },
               { value: 'analise', label: 'Análise' },
               { value: 'salvos', label: 'Salvos' },
               { value: 'pgn', label: 'PGN' },
@@ -254,7 +261,8 @@ export default function StudioPage() {
             </div>
           )}
           {side === 'motor' && <EnginePanel fen={h.fen} depth={settings.engineDepth} onLines={setEngineLines} onPlayPv={(sans) => sans[0] && h.playSan(sans[0])} />}
-          {side === 'analise' && <GameAnalysisPanel startFen={h.startFen} moves={h.moves} gameRef={gameRef} depth={settings.analysisDepth} analysis={analysis} onAnalysis={setAnalysis} onGo={h.goTo} />}
+          {side === 'analise' && <GameAnalysisPanel startFen={h.startFen} moves={h.moves} gameRef={gameRef} depth={settings.analysisDepth} analysis={analysis} onAnalysis={setAnalysis} onGo={h.goTo} onAsk={(cursor) => { h.goTo(cursor); setSide('tutor'); }} />}
+          {side === 'tutor' && <TutorPanel fen={h.fen} played={currentAnalysis} onShowMove={setTutorArrow} />}
           {side === 'salvos' && <SavedPanel fen={h.fen} onLoadFen={(f) => { h.reset(f); setGameRef(null); setAnalysis(null); }} onLoadOwn={(id) => setParams({ propria: id })} />}
           {side === 'pgn' && <PgnPanel getPgn={currentPgn} onImport={(text) => loadPgnText(text, null)} />}
         </Card>
