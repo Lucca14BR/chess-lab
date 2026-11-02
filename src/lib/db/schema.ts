@@ -1,6 +1,7 @@
 import { Dexie, type EntityTable } from 'dexie';
 import type { ChessComProfile, ChessComStats } from '@/lib/chesscom/types';
 import type { PuzzleCategory, Level } from '@/data/academy/types';
+import type { Segment } from '@/lib/tutor/types';
 
 /* ------------------------------------------------------------------ */
 /* Conta e dados importados do Chess.com (somente leitura na origem)   */
@@ -277,6 +278,30 @@ export interface SettingRow {
   value: unknown;
 }
 
+/** Mensagem da conversa com o tutor de IA (fio = revisão de partida ou posição). */
+export interface TutorMessage {
+  id: string;
+  threadId: string;
+  role: 'user' | 'tutor';
+  text: string;
+  segments: Segment[] | null;
+  model: string | null;
+  fen: string;
+  createdAt: number;
+  review?: {
+    moments: Array<{ ply: number; title: string; explanation: Segment[]; whatToConsider: Segment[] }>;
+    summary: Segment[];
+    userColor: 'white' | 'black';
+    clean: boolean;
+  };
+}
+
+/** Segredos locais (ex.: chave do Gemini). Nunca entram no backup. */
+export interface SecretRow {
+  key: string;
+  value: string;
+}
+
 export class ChessLabDB extends Dexie {
   declare account: EntityTable<AccountRow, 'id'>;
   declare archives: EntityTable<ArchiveRow, 'url'>;
@@ -297,6 +322,8 @@ export class ChessLabDB extends Dexie {
   declare goals: EntityTable<Goal, 'id'>;
   declare activity: EntityTable<ActivityLog, 'id'>;
   declare settings: EntityTable<SettingRow, 'key'>;
+  declare tutorMessages: EntityTable<TutorMessage, 'id'>;
+  declare secrets: EntityTable<SecretRow, 'key'>;
 
   constructor(name = 'chess-lab') {
     super(name);
@@ -320,6 +347,11 @@ export class ChessLabDB extends Dexie {
       goals: 'id, week, active',
       activity: 'id, date, kind',
       settings: 'key',
+    });
+    // Versão 2: só as tabelas novas (o Dexie mantém as da versão 1)
+    this.version(2).stores({
+      tutorMessages: 'id, threadId, createdAt',
+      secrets: 'key',
     });
   }
 }

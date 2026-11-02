@@ -1,6 +1,7 @@
 import { db } from '@/lib/db/schema';
 
-const TABLES = ['account', 'archives', 'games', 'ownGames', 'analyses', 'positions', 'notes', 'collections', 'puzzleAttempts', 'puzzleFavorites', 'lessonProgress', 'repertoire', 'openingNotes', 'sessions', 'templates', 'planned', 'goals', 'activity', 'settings'] as const;
+// 'secrets' fica de fora de propósito: a chave da IA nunca vai para o backup
+const TABLES = ['account', 'archives', 'games', 'ownGames', 'analyses', 'positions', 'notes', 'collections', 'puzzleAttempts', 'puzzleFavorites', 'lessonProgress', 'repertoire', 'openingNotes', 'sessions', 'templates', 'planned', 'goals', 'activity', 'settings', 'tutorMessages'] as const;
 
 export async function exportBackup(): Promise<string> {
   const tables: Record<string, unknown[]> = {};
@@ -30,8 +31,10 @@ export async function importBackup(json: string): Promise<number> {
 }
 
 export async function clearAllData() {
-  await db.transaction('rw', TABLES.map((t) => db.table(t)), async () => {
+  // 'secrets' (chave da IA) fica fora do backup, mas é apagada junto com os dados
+  await db.transaction('rw', [...TABLES.map((t) => db.table(t)), db.secrets], async () => {
     for (const t of TABLES) await db.table(t).clear();
+    await db.secrets.clear();
   });
 }
 

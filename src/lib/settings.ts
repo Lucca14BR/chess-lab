@@ -19,6 +19,8 @@ export interface Settings {
   autoSync: boolean;
   headerImage: string | null; // data URL personalizada
   dailyGoalMinutes: number;
+  tutorPrimaryModel: string | null; // modelo do tutor de IA (null = padrão)
+  tutorFallbackModel: string | null;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -35,6 +37,8 @@ export const DEFAULT_SETTINGS: Settings = {
   autoSync: true,
   headerImage: null,
   dailyGoalMinutes: 30,
+  tutorPrimaryModel: null,
+  tutorFallbackModel: null,
 };
 
 export const BOARD_THEMES: Array<{ id: BoardTheme; label: string; light: string; dark: string }> = [

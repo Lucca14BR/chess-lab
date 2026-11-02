@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Cloud, Calculator, PencilLine } from 'lucide-react';
+import { Cloud, Calculator, PencilLine, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Tone = 'neutral' | 'positive' | 'negative' | 'warning' | 'info' | 'accent';
@@ -21,15 +21,16 @@ export function Badge({ children, tone = 'neutral', className, title }: { childr
   );
 }
 
-export type DataSource = 'api' | 'calc' | 'manual';
+export type DataSource = 'api' | 'calc' | 'manual' | 'ai';
 
 const SOURCE: Record<DataSource, { label: string; title: string; icon: ReactNode }> = {
   api: { label: 'Chess.com', title: 'Dado fornecido diretamente pela API pública do Chess.com', icon: <Cloud /> },
   calc: { label: 'Calculado', title: 'Calculado pelo Chess Lab a partir dos dados disponíveis', icon: <Calculator /> },
   manual: { label: 'Manual', title: 'Registrado por você no Chess Lab', icon: <PencilLine /> },
+  ai: { label: 'IA', title: 'Explicação gerada por IA a partir da análise do motor', icon: <Sparkles /> },
 };
 
-/** Indica a origem do dado: API, cálculo do Chess Lab ou registro manual. */
+/** Indica a origem do dado: API, cálculo do Chess Lab, registro manual ou IA. */
 export function SourceTag({ source, className }: { source: DataSource; className?: string }) {
   const s = SOURCE[source];
   return (
