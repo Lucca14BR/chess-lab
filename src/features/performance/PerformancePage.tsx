@@ -66,7 +66,7 @@ export default function PerformancePage() {
 
   return (
     <Page>
-      <PageHeader eyebrow="Aprendizado" title="Desempenho" description="Estatísticas calculadas a partir das suas partidas importadas do Chess.com e dos seus treinos no Chess Lab." />
+      <PageHeader eyebrow="Aprendizado" title="Desempenho" description="Como você está evoluindo, a partir das suas partidas no Chess.com e dos seus treinos aqui." />
       <Tabs
         value={tab}
         onChange={setTab}
@@ -90,7 +90,7 @@ export default function PerformancePage() {
         </Card>
       ) : games.length === 0 ? (
         <Card>
-          <EmptyState icon={<ChartLine />} title="Nenhuma partida importada ainda" description="A sincronização pode estar em andamento. Acompanhe em Configurações." />
+          <EmptyState icon={<ChartLine />} title="Nenhuma partida importada ainda" description="Suas partidas podem estar a caminho: acompanhe a sincronização em Configurações." />
         </Card>
       ) : (
         <>
@@ -529,7 +529,7 @@ function StudyTab() {
               <Line dataKey="acc" stroke="var(--positive)" dot={false} strokeWidth={2} isAnimationActive={false} />
             </LineChart>
           ) : (
-            <EmptyState compact title="Poucas tentativas" description="Resolva ao menos 3 puzzles para ver a curva." />
+            <EmptyState compact title="Poucas tentativas" description="Resolva ao menos 3 puzzles para ver a sua curva." />
           )}
           {perDay.length > 0 && <p className="mt-2 text-xs text-ink-muted">{perDay.length} dias com puzzles · média de {(study.attempts.length / perDay.length).toFixed(1)} por dia ativo</p>}
         </CardBody>
@@ -549,7 +549,7 @@ function StudyTab() {
               <Bar dataKey="lessons" name="Aulas" stackId="s" fill="var(--info)" radius={[2, 2, 0, 0]} maxBarSize={18} />
             </BarChart>
           ) : (
-            <EmptyState compact title="Nenhum tempo registrado" description="Sessões do Centro de Treino, puzzles e aulas contam aqui." />
+            <EmptyState compact title="Nenhum tempo registrado" description="Seu tempo em sessões do Centro de Treino, puzzles e aulas aparece aqui." />
           )}
           <p className="mt-2 text-[11px] text-ink-faint">Puzzles e aulas feitos durante uma sessão cronometrada não são somados duas vezes.</p>
         </CardBody>

@@ -165,7 +165,7 @@ function Builder() {
         <CardHeader icon={<Lightbulb />} title="Sugestões" subtitle={<span className="inline-flex items-center gap-1.5">Com base nos seus resultados <SourceTag source="calc" /></span>} />
         <CardBody className="space-y-3">
           {recs.length === 0 ? (
-            <p className="text-sm text-ink-muted">Sem sugestões específicas ainda. Conforme você joga, resolve puzzles e estuda, o Chess Lab identifica onde focar.</p>
+            <p className="text-sm text-ink-muted">Ainda sem sugestões específicas. Conforme você joga, resolve puzzles e estuda, elas mostram onde vale focar.</p>
           ) : (
             recs.map((r) => (
               <div key={r.id} className="border-b border-line pb-3 last:border-0 last:pb-0">

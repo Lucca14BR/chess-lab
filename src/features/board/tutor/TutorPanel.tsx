@@ -61,7 +61,7 @@ export function TutorPanel({ fen, played, onShowMove }: { fen: string; played: A
         compact
         icon={<Sparkles />}
         title="Tutor de IA desativado"
-        description="Cole sua chave do Gemini em Configurações para conversar sobre a posição. O tutor explica a análise do Stockfish em português."
+        description="Cole sua chave do Gemini em Configurações e converse com o seu tutor sobre a posição. Ele explica a análise do Stockfish em português."
         action={<ButtonLink to="/configuracoes" variant="primary">Abrir Configurações</ButtonLink>}
       />
     );

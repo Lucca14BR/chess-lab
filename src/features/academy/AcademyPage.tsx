@@ -37,7 +37,7 @@ export default function AcademyPage() {
 
   return (
     <Page>
-      <PageHeader eyebrow="Workspace" title="Academia" description="Trilhas de aprendizado com aulas, exemplos em tabuleiro e exercícios validados. Algumas aulas exigem pré-requisitos para manter uma progressão sólida." />
+      <PageHeader eyebrow="Workspace" title="Academia" description="Suas trilhas de estudo: aulas com exemplos no tabuleiro e exercícios conferidos. Algumas pedem pré-requisitos, para você avançar com base sólida." />
       {TRACKS.length > 0 && (
       <div className="mb-6 grid gap-5 md:grid-cols-[auto_1fr]">
         <Card className="flex items-center gap-5 p-5">
@@ -131,7 +131,7 @@ export default function AcademyPage() {
       </div>
       {TRACKS.length === 0 && (
         <Card>
-          <EmptyState icon={<GraduationCap />} title="Conteúdo das aulas em preparação" description="As trilhas e aulas da Academia ainda estão sendo escritas e validadas. Enquanto isso, pratique na Sala de Desafios ou estude a Biblioteca de Aberturas." action={<><ButtonLink to="/puzzles" variant="primary">Resolver puzzles</ButtonLink><ButtonLink to="/aberturas">Ver aberturas</ButtonLink></>} />
+          <EmptyState icon={<GraduationCap />} title="Conteúdo das aulas em preparação" description="Suas trilhas e aulas ainda estão sendo escritas e conferidas. Enquanto isso, pratique na Sala de Desafios ou estude a Biblioteca de Aberturas." action={<><ButtonLink to="/puzzles" variant="primary">Resolver puzzles</ButtonLink><ButtonLink to="/aberturas">Ver aberturas</ButtonLink></>} />
         </Card>
       )}
     </Page>

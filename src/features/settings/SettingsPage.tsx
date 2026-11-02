@@ -23,7 +23,7 @@ import { cn, downloadText, formatDateTime, formatRelative, readFileAsDataUrl, re
 export default function SettingsPage() {
   return (
     <Page className="max-w-[1100px]">
-      <PageHeader eyebrow="Sistema" title="Configurações" description="Conta do Chess.com, aparência, tabuleiro, motor de análise e seus dados locais." />
+      <PageHeader eyebrow="Sistema" title="Configurações" description="Tudo do seu jeito: conta do Chess.com, aparência, tabuleiro, motor de análise e os seus dados locais." />
       <div className="space-y-5">
         <AccountSection />
         <ProfileSection />
@@ -220,7 +220,7 @@ function AppearanceSection() {
             ]}
           />
         </Field>
-        <Field label="Imagem do cabeçalho do Painel" hint="Por padrão, o Chess Lab desenha uma biblioteca com peças. Você pode usar uma imagem própria (fica salva localmente).">
+        <Field label="Imagem do cabeçalho do Painel" hint="Por padrão, o Painel mostra uma biblioteca com peças. Se preferir, use uma imagem sua (fica salva localmente).">
           <div className="flex flex-wrap items-center gap-3">
             {s.headerImage && <img src={s.headerImage} alt="Cabeçalho atual" className="h-14 w-40 rounded border border-line object-cover" />}
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => void onFile(e.target.files?.[0])} />
@@ -348,7 +348,7 @@ function DataSection() {
   const fmtMb = (b: number | null) => (b == null ? '—' : `${(b / 1024 / 1024).toFixed(1)} MB`);
   return (
     <Card>
-      <CardHeader icon={<Database />} title="Dados locais" subtitle="Tudo fica no IndexedDB deste navegador (arquitetura local-first)." />
+      <CardHeader icon={<Database />} title="Dados locais" subtitle="Tudo o que é seu fica no IndexedDB deste navegador (arquitetura local-first)." />
       <CardBody className="space-y-4">
         <Switch id="autosync" label="Sincronizar ao abrir o app" description="Atualiza os dados do Chess.com quando a última sincronização tem mais de 12 horas." checked={s.autoSync} onChange={(v) => void setSetting('autoSync', v)} />
         {summary && (

@@ -32,7 +32,7 @@ export default function OpeningsPage() {
 
   return (
     <Page>
-      <PageHeader eyebrow="Aprendizado" title="Biblioteca de Aberturas" description="Estude as ideias e os planos de cada abertura, navegue pela árvore de variantes e monte o seu próprio repertório." />
+      <PageHeader eyebrow="Aprendizado" title="Biblioteca de Aberturas" description="As ideias e os planos de cada abertura, a árvore de variantes e o repertório que você vai montando aos poucos." />
       <Tabs
         value={tab}
         onChange={(t) => setParams({ aba: t })}
@@ -116,7 +116,7 @@ function RepertoireList() {
             />
             <CardBody className="space-y-2">
               {list.length === 0 ? (
-                <EmptyState compact icon={<BookOpenText />} title="Vazio" description={`Adicione aberturas da biblioteca ou crie linhas próprias para ${c === 'white' ? 'brancas' : 'pretas'}.`} />
+                <EmptyState compact icon={<BookOpenText />} title="Nada aqui ainda" description={`Adicione aberturas da biblioteca ou crie suas próprias linhas para ${c === 'white' ? 'brancas' : 'pretas'}.`} />
               ) : (
                 list.map((e) => (
                   <button key={e.id} type="button" onClick={() => setParams({ repertorio: e.id })} className="flex w-full items-center gap-3 rounded-md border border-line bg-sunken px-3 py-2.5 text-left hover:border-line-strong">

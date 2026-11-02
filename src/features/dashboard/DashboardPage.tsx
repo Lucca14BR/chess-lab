@@ -101,10 +101,10 @@ export default function DashboardPage() {
           <ProgressCard games={games} stats={account.stats} />
         ) : (
           <Card className="md:col-span-2 xl:col-span-2">
-            <CardHeader icon={<ChartNoAxesColumn />} title="Conecte sua conta do Chess.com" subtitle="Para ver rating, evolução e histórico reais." />
+            <CardHeader icon={<ChartNoAxesColumn />} title="Conecte sua conta do Chess.com" subtitle="Para acompanhar aqui seu rating, sua evolução e seu histórico reais." />
             <CardBody>
               <ConnectChessCom compact />
-              <p className="mt-3 text-xs text-ink-faint">Sem conta conectada, o Chess Lab não exibe estatísticas de partidas. Puzzles, aulas, caderno e treinos funcionam normalmente.</p>
+              <p className="mt-3 text-xs text-ink-faint">Sem conta conectada, não há estatísticas de partidas por aqui. Seus puzzles, aulas, caderno e treinos funcionam normalmente.</p>
             </CardBody>
           </Card>
         )}
@@ -209,7 +209,7 @@ function ProgressCard({ games, stats }: { games: NonNullable<ReturnType<typeof u
                   </p>
                 </>
               ) : (
-                <p className="py-6 text-center text-xs text-ink-muted">Ainda não há partidas {TIME_CLASS_LABEL[active].toLowerCase()} suficientes importadas para desenhar a evolução.</p>
+                <p className="py-6 text-center text-xs text-ink-muted">Ainda faltam partidas {TIME_CLASS_LABEL[active].toLowerCase()} importadas para desenhar a sua evolução.</p>
               )}
             </div>
             {record && (
@@ -247,7 +247,7 @@ function GoalsCard({ study, games }: { study: ReturnType<typeof useStudyData>; g
         {!study ? (
           <Skeleton className="h-32" />
         ) : rows.length === 0 ? (
-          <EmptyState compact icon={<Target />} title="Nenhuma meta nesta semana" description="Defina metas semanais; o progresso é calculado automaticamente a partir dos seus treinos." action={<ButtonLink to="/treino?aba=metas" size="sm" variant="primary">Criar meta</ButtonLink>} />
+          <EmptyState compact icon={<Target />} title="Nenhuma meta nesta semana" description="Escolha suas metas da semana; o progresso é calculado sozinho a partir dos seus treinos." action={<ButtonLink to="/treino?aba=metas" size="sm" variant="primary">Criar meta</ButtonLink>} />
         ) : (
           <>
             <div className="flex items-center gap-5">
@@ -301,7 +301,7 @@ function ActivityCard() {
         {!items ? (
           <Skeleton className="my-2 h-32" />
         ) : items.length === 0 ? (
-          <EmptyState compact icon={<Zap />} title="Nada por aqui ainda" description="Puzzles, aulas, sessões e sincronizações aparecerão aqui." />
+          <EmptyState compact icon={<Zap />} title="Nada por aqui ainda" description="Seus puzzles, aulas, sessões e sincronizações vão aparecer aqui." />
         ) : (
           <ul className="divide-y divide-line">
             {items.map((a) => (
@@ -373,7 +373,7 @@ function LastTrainingCard() {
         {!last ? (
           <Skeleton className="h-36" />
         ) : !attempt && !last.session ? (
-          <EmptyState compact icon={<Puzzle />} title="Nenhum treino registrado" description="Resolva um puzzle ou inicie uma sessão no Centro de Treino." action={<ButtonLink to="/puzzles" size="sm" variant="primary">Resolver um puzzle</ButtonLink>} />
+          <EmptyState compact icon={<Puzzle />} title="Nenhum treino ainda" description="Que tal começar com um puzzle ou uma sessão no Centro de Treino?" action={<ButtonLink to="/puzzles" size="sm" variant="primary">Resolver um puzzle</ButtonLink>} />
         ) : (
           <div className="flex gap-4">
             {attempt && fen && (
@@ -423,7 +423,7 @@ function UpcomingCard({ planned }: { planned: StudyData['planned'] | undefined }
         {!planned ? (
           <Skeleton className="h-32" />
         ) : upcoming.length === 0 ? (
-          <EmptyState compact icon={<CalendarDays />} title="Agenda livre" description="Planeje atividades da semana no Centro de Treino." action={<ButtonLink to="/treino?aba=plano" size="sm">Planejar semana</ButtonLink>} />
+          <EmptyState compact icon={<CalendarDays />} title="Agenda livre" description="Sua semana está livre. Planeje atividades no Centro de Treino." action={<ButtonLink to="/treino?aba=plano" size="sm">Planejar semana</ButtonLink>} />
         ) : (
           <ol className="relative space-y-4 border-l border-line pl-5">
             {upcoming.map((p, i) => (
@@ -460,7 +460,7 @@ function LessonsCard({ lessons }: { lessons: StudyData['lessons'] | undefined })
         {!lessons ? (
           <Skeleton className="h-28" />
         ) : inProgress.length === 0 ? (
-          <EmptyState compact icon={<GraduationCap />} title="Nenhuma aula em andamento" description="Escolha uma trilha na Academia e comece pela primeira aula." action={<ButtonLink to="/academia" size="sm">Abrir Academia</ButtonLink>} />
+          <EmptyState compact icon={<GraduationCap />} title="Nenhuma aula em andamento" description="Escolha uma trilha na Academia e comece pela primeira aula, no seu ritmo." action={<ButtonLink to="/academia" size="sm">Abrir Academia</ButtonLink>} />
         ) : (
           <ul className="space-y-3">
             {inProgress.map((p) => {
@@ -527,7 +527,7 @@ function RecommendationsCard({ games, study, analyses }: { games: NonNullable<Re
         {!study ? (
           <Skeleton className="h-28" />
         ) : recs.length === 0 ? (
-          <EmptyState compact icon={<Lightbulb />} title="Sem recomendações por enquanto" description="Elas surgem quando há partidas, puzzles ou aulas suficientes para identificar padrões." />
+          <EmptyState compact icon={<Lightbulb />} title="Sem recomendações por enquanto" description="Elas aparecem quando as suas partidas, puzzles e aulas já mostram padrões." />
         ) : (
           recs.map((r) => (
             <div key={r.id} className="border-b border-line pb-3 last:border-0 last:pb-0">

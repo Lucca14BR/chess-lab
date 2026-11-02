@@ -102,7 +102,7 @@ export default function PuzzlesPage() {
 
   return (
     <Page>
-      <PageHeader eyebrow="Workspace" title="Sala de Desafios" description="Puzzles táticos reais da base pública da Lichess (CC0), validados lance a lance. Cada tentativa fica registrada no seu histórico local." />
+      <PageHeader eyebrow="Workspace" title="Sala de Desafios" description="Seus puzzles: posições reais da base pública da Lichess (CC0), conferidas lance a lance. Tudo o que você resolve fica guardado aqui com você." />
 
       {/* Estatísticas */}
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-5">

@@ -170,7 +170,7 @@ export default function StudioPage() {
       <PageHeader
         eyebrow="Workspace"
         title="Tabuleiro"
-        description={gameRef ? gameRef.title : 'Jogue, estude posições, comente lances e analise com o Stockfish.'}
+        description={gameRef ? gameRef.title : 'Seu tabuleiro: jogue, estude posições, comente lances e analise com o Stockfish.'}
         actions={
           <>
             <SaveGameButton pgn={currentPgn} ownId={ownId} onSaved={setOwnId} defaultTitle={gameRef?.title ?? ''} />
@@ -397,7 +397,7 @@ function SavedPanel({ fen, onLoadFen, onLoadOwn }: { fen: string; onLoadFen: (fe
           </label>
         </div>
         {list.length === 0 ? (
-          <EmptyState compact title="Nenhuma posição" description="Salve posições para revisitá-las ou usá-las em notas." />
+          <EmptyState compact title="Nenhuma posição" description="Salve posições para voltar a elas ou usá-las no seu caderno." />
         ) : (
           <ul className="max-h-60 space-y-1 overflow-y-auto">
             {list.map((p) => (

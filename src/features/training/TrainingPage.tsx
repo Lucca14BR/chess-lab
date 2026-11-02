@@ -13,7 +13,7 @@ export default function TrainingPage() {
   const running = useStore(sessionStore).running;
   return (
     <Page>
-      <PageHeader eyebrow="Aprendizado" title="Centro de Treino" description="Planeje a semana, monte sessões cronometradas, acompanhe metas e a sua consistência. As sugestões se adaptam aos seus resultados, sem impor rotina." />
+      <PageHeader eyebrow="Aprendizado" title="Centro de Treino" description="Sua semana de estudo: planeje, monte sessões cronometradas e acompanhe metas e constância. As sugestões seguem os seus resultados, sem impor rotina." />
       <Tabs<TabId>
         value={tab}
         onChange={(t) => setParams({ aba: t })}

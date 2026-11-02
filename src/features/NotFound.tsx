@@ -9,7 +9,7 @@ export function NotFound() {
       <EmptyState
         icon={<ChessPawn />}
         title="Página não encontrada"
-        description="Este endereço não existe no Chess Lab."
+        description="Este endereço não existe por aqui."
         action={
           <ButtonLink to="/" variant="primary">Voltar ao Painel</ButtonLink>
         }

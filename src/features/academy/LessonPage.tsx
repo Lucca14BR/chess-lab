@@ -108,7 +108,7 @@ export default function LessonPage() {
               ))}
               .
             </Alert>
-            <p className="text-sm text-ink-muted">Os pré-requisitos ajudam a construir o conhecimento em ordem, mas você pode visualizar o conteúdo mesmo assim.</p>
+            <p className="text-sm text-ink-muted">Os pré-requisitos ajudam você a construir o conhecimento em ordem, mas a aula fica aberta mesmo assim.</p>
             <Button
               onClick={() => {
                 setOverride(true);

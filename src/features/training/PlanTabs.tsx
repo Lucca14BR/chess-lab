@@ -280,7 +280,7 @@ export function GoalsTab() {
 
   return (
     <Card>
-      <CardHeader icon={<Target />} title="Metas da semana" subtitle="O progresso das metas automáticas é calculado a partir dos seus registros no Chess Lab." action={<Button size="sm" variant="primary" onClick={() => setOpen(true)}><Plus /> Nova meta</Button>} />
+      <CardHeader icon={<Target />} title="Metas da semana" subtitle="O progresso das metas automáticas é calculado a partir do que você registra aqui." action={<Button size="sm" variant="primary" onClick={() => setOpen(true)}><Plus /> Nova meta</Button>} />
       <CardBody>
         {current.length === 0 ? (
           <EmptyState compact icon={<Target />} title="Nenhuma meta definida" description="Exemplos: resolver 50 puzzles, estudar 120 minutos, concluir 2 aulas." action={<Button variant="primary" onClick={() => setOpen(true)}>Criar meta</Button>} />

@@ -75,7 +75,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
         <GlobalSearch />
         <div className="ml-auto flex shrink-0 items-center gap-2.5">
           {!online && (
-            <span className="hidden items-center gap-1.5 text-xs text-warning sm:flex" title="Sem conexão: o Chess Lab continua funcionando com os dados locais.">
+            <span className="hidden items-center gap-1.5 text-xs text-warning sm:flex" title="Sem conexão: tudo continua funcionando com os seus dados locais.">
               <CloudOff className="size-3.5" /> Offline
             </span>
           )}

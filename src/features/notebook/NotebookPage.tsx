@@ -89,7 +89,7 @@ export default function NotebookPage() {
       <PageHeader
         eyebrow="Aprendizado"
         title="Caderno de Estudos"
-        description="Notas, posições, erros recorrentes e coleções — salvos automaticamente neste navegador."
+        description="Seu caderno: anote ideias, erros que se repetem e posições para rever. Salva sozinho, neste navegador, enquanto você escreve."
         actions={
           <Button variant="primary" onClick={() => void createNote()}>
             <Plus /> Nova nota
@@ -116,7 +116,7 @@ export default function NotebookPage() {
             </div>
             <Card className="max-h-[70vh] overflow-y-auto p-1.5">
               {!notes ? null : filtered.length === 0 ? (
-                <EmptyState compact icon={<NotebookPen />} title={notes.length ? 'Nada encontrado' : 'Caderno vazio'} description={notes.length ? 'Ajuste o filtro ou a pesquisa.' : 'Crie sua primeira nota.'} />
+                <EmptyState compact icon={<NotebookPen />} title={notes.length ? 'Nada encontrado' : 'Caderno vazio'} description={notes.length ? 'Ajuste o filtro ou a pesquisa.' : 'Comece pela sua primeira nota.'} />
               ) : (
                 <ul className="space-y-0.5">
                   {filtered.map((n) => (
@@ -143,7 +143,7 @@ export default function NotebookPage() {
             <NoteEditor key={selected.id} note={selected} categories={categories} collections={collections ?? []} onDeleted={() => setParams({})} />
           ) : (
             <Card>
-              <EmptyState icon={<NotebookPen />} title="Selecione ou crie uma nota" description="Registre ideias de aberturas, planos, erros que se repetem e posições para revisar." action={<Button variant="primary" onClick={() => void createNote()}><Plus /> Nova nota</Button>} />
+              <EmptyState icon={<NotebookPen />} title="Selecione ou crie uma nota" description="Anote ideias de aberturas, planos, erros que se repetem e posições para rever." action={<Button variant="primary" onClick={() => void createNote()}><Plus /> Nova nota</Button>} />
             </Card>
           )}
         </div>
@@ -240,7 +240,7 @@ function FilterSidebar({ filter, setFilter, categories, collections, notes }: { 
               <Input value={newCol} onChange={(e) => setNewCol(e.target.value)} placeholder="Nome da coleção" autoFocus className="h-7 text-xs" onBlur={() => void saveCollection()} aria-label="Nome da nova coleção" />
             </form>
           )}
-          {!collections.length && newCol === null && <p className="px-2.5 text-xs text-ink-faint">Agrupe notas por tema de estudo.</p>}
+          {!collections.length && newCol === null && <p className="px-2.5 text-xs text-ink-faint">Agrupe suas notas por tema de estudo.</p>}
         </div>
       </div>
     </nav>
@@ -415,7 +415,7 @@ function LinkGameDialog({ open, onClose, onPick }: { open: boolean; onClose: () 
               </button>
             </li>
           ))}
-        {data && !data.games.length && !data.own.length && <EmptyState compact title="Nenhuma partida disponível" description="Conecte o Chess.com ou salve partidas no Tabuleiro." />}
+        {data && !data.games.length && !data.own.length && <EmptyState compact title="Nenhuma partida disponível" description="Conecte o Chess.com ou salve suas partidas no Tabuleiro." />}
       </ul>
     </Dialog>
   );
@@ -433,7 +433,7 @@ function PositionsTab({ onCreateNote }: { onCreateNote: (p: SavedPosition) => vo
       </label>
       {list.length === 0 ? (
         <Card>
-          <EmptyState icon={<ChessKnight />} title="Nenhuma posição salva" description="Salve posições no Tabuleiro, na Biblioteca de Aberturas ou nas aulas." action={<ButtonLink to="/tabuleiro">Abrir Tabuleiro</ButtonLink>} />
+          <EmptyState icon={<ChessKnight />} title="Nenhuma posição salva" description="As posições que você salvar no Tabuleiro, na Biblioteca de Aberturas ou nas aulas ficam reunidas aqui." action={<ButtonLink to="/tabuleiro">Abrir Tabuleiro</ButtonLink>} />
         </Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
