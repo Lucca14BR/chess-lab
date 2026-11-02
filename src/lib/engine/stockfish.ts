@@ -27,6 +27,23 @@ export interface AnalyzeOptions {
   movetimeMs?: number;
   onUpdate?: (lines: EngineLine[], depth: number) => void;
   signal?: AbortSignal;
+  /** Força reduzida (jogo contra o computador). Sem este campo, o job roda com força total. */
+  strength?: EngineStrength;
+}
+
+export interface EngineStrength {
+  /** Skill Level do Stockfish (0–20). */
+  skill?: number;
+  /** Elo alvo (liga UCI_LimitStrength). */
+  elo?: number;
+}
+
+/** Opções de força enviadas antes de cada job: todo job define tudo, para um jogo fraco não contaminar as análises. */
+export function strengthCommands(strength?: EngineStrength): string[] {
+  const elo = strength?.elo;
+  const cmds = [`setoption name Skill Level value ${strength?.skill ?? 20}`, `setoption name UCI_LimitStrength value ${elo != null}`];
+  if (elo != null) cmds.push(`setoption name UCI_Elo value ${elo}`);
+  return cmds;
 }
 
 /** Converte "info ..." em linha de análise (avaliação no ponto de vista das brancas). */
@@ -192,6 +209,7 @@ class StockfishEngine {
       };
       this.listeners.add(onLine);
       this.send('ucinewgame');
+      strengthCommands(opts.strength).forEach((c) => this.send(c));
       this.send(`setoption name MultiPV value ${multiPv}`);
       this.send(`position fen ${fen}`);
       this.send(opts.movetimeMs ? `go movetime ${opts.movetimeMs}` : `go depth ${opts.depth ?? 16}`);
