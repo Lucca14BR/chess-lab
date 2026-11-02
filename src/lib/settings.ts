@@ -21,6 +21,7 @@ export interface Settings {
   dailyGoalMinutes: number;
   tutorPrimaryModel: string | null; // modelo do tutor de IA (null = padrão)
   tutorFallbackModel: string | null;
+  welcomeDismissed: boolean; // "Agora não" no cartão de boas-vindas do Painel
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -39,6 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dailyGoalMinutes: 30,
   tutorPrimaryModel: null,
   tutorFallbackModel: null,
+  welcomeDismissed: false,
 };
 
 export const BOARD_THEMES: Array<{ id: BoardTheme; label: string; light: string; dark: string }> = [

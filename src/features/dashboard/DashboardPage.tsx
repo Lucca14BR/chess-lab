@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ChartNoAxesColumn, Target, Zap, ChessKnight, CalendarDays, Puzzle, GraduationCap, Lightbulb, UserRound, ArrowRight, Check, X, RefreshCw, Trophy } from 'lucide-react';
+import { ChartNoAxesColumn, Target, Zap, ChessKnight, CalendarDays, Puzzle, GraduationCap, Lightbulb, UserRound, ArrowRight, Check, X, RefreshCw, Trophy, Hand } from 'lucide-react';
 import { db, type GameAnalysis, type TimeClass } from '@/lib/db/schema';
-import { useAccount, useImportedGames, useStudyData, type StudyData } from '@/lib/hooks';
-import { useSettings } from '@/lib/settings';
+import { useAccount, useImportedGames, useStudyData, useUserName, type StudyData } from '@/lib/hooks';
+import { setSetting, useSettings } from '@/lib/settings';
 import { useStore } from '@/lib/store';
 import { syncStore, syncAccount } from '@/lib/chesscom/sync';
 import { TIME_CLASS_LABEL, modeStats } from '@/lib/chesscom/normalize';
@@ -17,7 +17,7 @@ import { ACTIVITY_TYPES, GOAL_METRICS } from '@/lib/labels';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { EmptyState, ProgressBar, Ring, Skeleton } from '@/components/ui/Feedback';
-import { Segmented } from '@/components/ui/Form';
+import { Input, Segmented } from '@/components/ui/Form';
 import { SourceTag } from '@/components/ui/Badge';
 import { RatingAreaChart, WdlLegend } from '@/components/charts/Charts';
 import { MiniBoard } from '@/components/board/ChessBoard';
@@ -45,7 +45,7 @@ export default function DashboardPage() {
   const sync = useStore(syncStore);
   const analyses = useLiveQuery(() => db.analyses.toArray(), []);
 
-  const name = settings.displayName || account?.profile.name?.split(' ')[0] || account?.displayUsername || '';
+  const name = useUserName();
   const maxim = MAXIMS[new Date().getDate() % MAXIMS.length];
 
   return (
@@ -65,7 +65,7 @@ export default function DashboardPage() {
             <h1 className="font-display text-[44px] leading-[1.02] text-[#efe4cf] sm:text-[56px]">
               {greeting()},
               <br />
-              {name ? `${name}.` : 'bem-vindo ao Chess Lab.'}
+              {name ? `${name}.` : 'que bom ver você por aqui.'}
             </h1>
             <p className="font-display mt-4 text-xl text-[#d8c7a8] italic">“{maxim}”</p>
           </div>
@@ -92,6 +92,7 @@ export default function DashboardPage() {
       </section>
 
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-5 px-5 py-6 md:grid-cols-2 lg:px-8 xl:grid-cols-3">
+        <WelcomeCard />
         {account === undefined || games === undefined ? (
           <Card className="p-5 xl:col-span-1">
             <Skeleton className="h-40" />
@@ -117,6 +118,43 @@ export default function DashboardPage() {
         {account && <ProfileCard />}
       </div>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+// Pergunta o nome uma vez; some ao salvar ou com "Agora não"
+function WelcomeCard() {
+  const saved = useLiveQuery(async () => {
+    const [n, d] = await db.settings.bulkGet(['displayName', 'welcomeDismissed']);
+    return { name: (n?.value as string | undefined) ?? '', dismissed: d?.value === true };
+  }, []);
+  const [draft, setDraft] = useState('');
+  // Ainda carregando, com nome ou dispensado: nada a mostrar
+  if (!saved || saved.name || saved.dismissed) return null;
+  const name = draft.trim();
+  return (
+    <Card>
+      <CardHeader icon={<Hand />} title="Como devemos chamar você?" subtitle="Seu nome aparece na saudação, na barra lateral e nas conversas com o tutor." />
+      <CardBody>
+        <form
+          className="flex flex-wrap items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (name) void setSetting('displayName', name);
+          }}
+        >
+          <Input value={draft} maxLength={40} onChange={(e) => setDraft(e.target.value)} placeholder="Seu nome" aria-label="Seu nome" className="min-w-0 flex-1" />
+          <Button type="submit" size="sm" variant="primary" disabled={!name}>
+            Salvar
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => void setSetting('welcomeDismissed', true)}>
+            Agora não
+          </Button>
+        </form>
+        <p className="mt-3 text-xs text-ink-faint">Fica só neste navegador. Dá para mudar quando quiser em Configurações.</p>
+      </CardBody>
+    </Card>
   );
 }
 

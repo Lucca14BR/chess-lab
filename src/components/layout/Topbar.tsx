@@ -4,6 +4,7 @@ import { Menu, Moon, Sun, RefreshCw, CloudOff, Timer } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db/schema';
 import { applyTheme, getTheme, type ThemeMode } from '@/lib/settings';
+import { useUserName } from '@/lib/hooks';
 import { useStore } from '@/lib/store';
 import { syncStore } from '@/lib/chesscom/sync';
 import { sessionStore } from '@/lib/services/sessionRunner';
@@ -59,11 +60,10 @@ function useOnline() {
 
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const account = useLiveQuery(() => db.account.get('chesscom'), []);
-  const displayName = useLiveQuery(async () => (await db.settings.get('displayName'))?.value as string | undefined, []);
   const sync = useStore(syncStore);
   const session = useStore(sessionStore);
   const online = useOnline();
-  const name = displayName || account?.profile.name || account?.displayUsername || '';
+  const name = useUserName();
   const initial = (name || 'C').trim().charAt(0).toUpperCase();
 
   return (

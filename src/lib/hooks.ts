@@ -1,9 +1,17 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type ImportedGame } from '@/lib/db/schema';
+import { useSettings } from '@/lib/settings';
+import { userName } from '@/lib/userName';
 
 export function useAccount() {
   // null = sem conta conectada; undefined = ainda carregando
   return useLiveQuery(async () => (await db.account.get('chesscom')) ?? null, []);
+}
+
+/** Nome de quem usa (Configurações, senão Chess.com); vazio se não houver. */
+export function useUserName(): string {
+  const { displayName } = useSettings();
+  return userName(displayName, useAccount());
 }
 
 /** Partidas da conta conectada (undefined enquanto carrega). */

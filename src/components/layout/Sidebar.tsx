@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router';
 import { Home, ChessKnight, Puzzle, GraduationCap, BookOpenText, ChartLine, NotebookPen, Dumbbell, Settings, X } from 'lucide-react';
+import { useUserName } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 import { Logo } from './Logo';
 
@@ -29,6 +30,7 @@ export const NAV = [
 ];
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const name = useUserName();
   return (
     <>
       <div className={cn('fixed inset-0 z-30 bg-black/50 lg:hidden', open ? 'block' : 'hidden')} onClick={onClose} aria-hidden />
@@ -78,6 +80,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           ))}
         </nav>
         <div className="border-t border-line px-6 py-4 text-center">
+          {name && <p className="font-display mb-1 truncate text-[16px] text-ink">A biblioteca de {name}</p>}
           <p className="font-display text-[15px] text-ink-muted italic">“Pense. Estude. Evolua.”</p>
           <p className="mt-2 text-[10px] leading-snug text-ink-faint">Aplicativo independente, sem afiliação com o Chess.com.</p>
         </div>

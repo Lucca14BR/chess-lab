@@ -184,7 +184,7 @@ function ProfileSection() {
     <Card>
       <CardHeader icon={<UserRound />} title="Perfil local" />
       <CardBody>
-        <Field label="Como devemos chamar você?" htmlFor="display-name" hint="Usado na saudação do Painel. Fica salvo apenas neste navegador.">
+        <Field label="Como devemos chamar você?" htmlFor="display-name" hint="Aparece na saudação do Painel, na barra lateral e nas conversas com o tutor. Fica salvo só neste navegador.">
           <Input id="display-name" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} onBlur={() => void setSetting('displayName', name.trim())} placeholder="Seu nome" className="max-w-sm" />
         </Field>
       </CardBody>
