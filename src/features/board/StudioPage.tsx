@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight, Undo2, Redo2, RotateCcw, FlipVertical2, Copy, Upload, Download, BookmarkPlus, Star, Trash2, Save, Scissors, NotebookPen, FolderOpen } from 'lucide-react';
-import { db, type GameAnalysis } from '@/lib/db/schema';
+import { db, type GameAnalysis, type OwnGame } from '@/lib/db/schema';
 import { useGameHistory, type HistMove } from '@/lib/chess/useGameHistory';
 import { START_FEN, validateFen } from '@/lib/chess/board';
 import { buildPgn, parsePgn, replayMainline, splitPgn } from '@/lib/chess/pgn';
@@ -22,6 +22,9 @@ import { GameAnalysisPanel, type GameRef } from './GameAnalysisPanel';
 import { analysisMatches } from '@/lib/engine/gameAnalysis';
 import { TutorPanel } from './tutor/TutorPanel';
 import { copyToClipboard, downloadText, formatDate, readFileAsText, uid } from '@/lib/utils';
+
+/** Rótulo da origem nas partidas próprias (as do próprio Tabuleiro não levam rótulo). */
+const OWN_SOURCE_LABEL: Record<OwnGame['source'], string> = { studio: '', 'pgn-import': 'PGN importado', play: 'Contra o computador' };
 
 type Side = 'lances' | 'motor' | 'tutor' | 'analise' | 'salvos' | 'pgn';
 
@@ -88,7 +91,8 @@ export default function StudioPage() {
     } else if (propria) {
       void db.ownGames.get(propria).then(async (g) => {
         if (!g) return toast('Partida não encontrada.', 'negative');
-        loadPgnText(g.pgn, { kind: 'own', id: g.id, title: g.title }, g.id);
+        loadPgnText(g.pgn, { kind: 'own', id: g.id, title: g.title, userColor: g.userColor }, g.id);
+        if (g.userColor) setOrientation(g.userColor);
         const saved = await db.analyses.get(`own:${g.id}`);
         if (saved) setAnalysis(saved);
       });
@@ -436,6 +440,7 @@ function SavedPanel({ fen, onLoadFen, onLoadOwn }: { fen: string; onLoadFen: (fe
                   <span className="block truncate text-sm text-ink">{g.title}</span>
                   <span className="block text-[11px] text-ink-faint">
                     {formatDate(g.updatedAt)} · {g.result}
+                    {OWN_SOURCE_LABEL[g.source] && ` · ${OWN_SOURCE_LABEL[g.source]}`}
                   </span>
                 </button>
                 <Button size="icon-sm" variant="ghost" aria-label="Abrir" onClick={() => onLoadOwn(g.id)}>

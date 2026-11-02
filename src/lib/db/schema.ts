@@ -80,7 +80,9 @@ export interface OwnGame {
   white: string;
   black: string;
   result: string;
-  source: 'studio' | 'pgn-import';
+  source: 'studio' | 'pgn-import' | 'play';
+  /** Cor de quem usa, quando conhecida (partidas contra o computador). */
+  userColor?: 'white' | 'black';
   createdAt: number;
   updatedAt: number;
 }
