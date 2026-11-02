@@ -59,7 +59,7 @@ export function ExerciseBoard({ fen, solution, checkmate, explanation, solved: i
     setLast([from, to]);
     setHint(null);
     if (isLast) {
-      playSfx('GenericNotify');
+      playSfx('GenericNotify', { finale: true });
       setState('solved');
       onSolved?.();
       return;

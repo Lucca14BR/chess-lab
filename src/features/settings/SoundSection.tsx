@@ -37,9 +37,12 @@ export function SoundSection() {
   return (
     <div ref={ref} id="som" className="scroll-mt-20">
       <Card>
-        <CardHeader icon={<Volume2 />} title="Som" subtitle="Efeitos dos lances, música para estudar e chuva de fundo. Tudo funciona sem internet." />
+        <CardHeader icon={<Volume2 />} title="Som" subtitle="Efeitos dos lances, música para estudar e chuva de fundo. A chuva e os trovões são gerados no próprio navegador, sem arquivos." />
         <CardBody className="space-y-6">
-          <Range id="master-volume" label="Volume geral" value={s.masterVolume} onChange={(v) => void setSetting('masterVolume', v)} className="max-w-sm" />
+          <div className="space-y-1.5">
+            <Range id="master-volume" label="Volume geral" value={s.masterVolume} onChange={(v) => void setSetting('masterVolume', v)} className="max-w-sm" />
+            <p className="text-xs text-ink-faint">No iPhone, a chave de silencioso pode deixar mudos os efeitos e a chuva; se não ouvir nada, confira a chave e o volume do aparelho.</p>
+          </div>
 
           <section className="border-t border-line pt-4">
             <Subheading>Efeitos dos lances</Subheading>
@@ -107,6 +110,7 @@ function MusicPart() {
   const userTracks = useUserTracks();
   const fileRef = useRef<HTMLInputElement>(null);
   const [adding, setAdding] = useState(false);
+  const playingNow = bg.music && !music.blocked; // recusado pelo navegador: mostra "tocar"
   const [errors, setErrors] = useState<string[]>([]);
 
   const onFiles = async (files: FileList | null) => {
@@ -134,7 +138,7 @@ function MusicPart() {
     <section className="border-t border-line pt-4">
       <Subheading>Música</Subheading>
       <div className="divide-y divide-line">
-        <Switch id="music-on" label="Tocar música" description="Continua tocando enquanto você muda de página." checked={bg.music} onChange={(v) => void setMusicOn(v)} />
+        <Switch id="music-on" label="Tocar música" description="Continua tocando enquanto você muda de página. As faixas incluídas são baixadas do site quando tocam pela primeira vez." checked={playingNow} onChange={(v) => void setMusicOn(v)} />
         <Switch id="music-shuffle" label="Ordem aleatória" checked={s.musicShuffle} onChange={(v) => void setSetting('musicShuffle', v)} />
       </div>
       <Range id="music-volume" label="Volume da música" value={s.musicVolume} onChange={(v) => void setSetting('musicVolume', v)} className="mt-2 max-w-sm" />
@@ -142,7 +146,7 @@ function MusicPart() {
       <ul className="mt-4 space-y-1" aria-label="Faixas">
         {rows.map((t) => {
           const current = music.currentId === t.id;
-          const playing = current && bg.music;
+          const playing = current && playingNow;
           return (
             <li key={t.id} className={cn('flex items-center gap-2 rounded-md border px-2 py-1.5', current ? 'border-brass/50 bg-accent-soft' : 'border-line bg-sunken')}>
               <Button size="icon-sm" variant="ghost" onClick={() => void (playing ? setMusicOn(false) : playTrack(t.id))} aria-label={playing ? `Pausar ${t.name}` : `Tocar ${t.name}`}>

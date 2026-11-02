@@ -1,7 +1,7 @@
 import { setSetting, setSettings, useSettings, type AmbientType } from '@/lib/settings';
 import { useStore } from '@/lib/store';
 import { ambientPatch, backgroundSession, backgroundState, type BackgroundState } from './background';
-import { selectMusicTrack } from './music';
+import { playNow, selectMusicTrack } from './music';
 
 /** Ações dos controles de som (barra do topo e Configurações › Som). */
 
@@ -18,9 +18,14 @@ export function useBackground(): BackgroundState {
   return backgroundState(s, session);
 }
 
+/**
+ * Liga/desliga a música. Chame direto no clique: o play acontece antes do primeiro await,
+ * ainda dentro do gesto (o Safari recusa depois). A gravação vem em seguida.
+ */
 export async function setMusicOn(on: boolean) {
+  if (on) playNow();
+  backgroundSession.set({ musicActive: true, musicOn: on });
   await setSetting('musicEnabled', on);
-  backgroundSession.set({ musicActive: true });
 }
 
 /** Toca uma faixa da lista (liga a música, se estiver desligada). */

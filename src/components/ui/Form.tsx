@@ -83,16 +83,29 @@ export function Segmented<T extends string>({ value, onChange, options, size = '
 export function Range({ id, label, value, onChange, disabled, className }: { id: string; label: string; value: number; onChange: (v: number) => void; disabled?: boolean; className?: string }) {
   const [local, setLocal] = useState(value);
   const timer = useRef<number | null>(null);
+  const pending = useRef<{ v: number; onChange: (v: number) => void } | null>(null);
   useEffect(() => {
     if (timer.current === null) setLocal(value);
   }, [value]);
-  useEffect(() => () => void (timer.current !== null && clearTimeout(timer.current)), []);
+  // Saiu da tela com uma mudança esperando: grava agora, para não perdê-la
+  useEffect(
+    () => () => {
+      if (timer.current !== null) clearTimeout(timer.current);
+      timer.current = null;
+      pending.current?.onChange(pending.current.v);
+      pending.current = null;
+    },
+    [],
+  );
   const change = (v: number) => {
     setLocal(v);
+    pending.current = { v, onChange };
     if (timer.current !== null) clearTimeout(timer.current);
     timer.current = window.setTimeout(() => {
       timer.current = null;
-      onChange(v);
+      const p = pending.current;
+      pending.current = null;
+      p?.onChange(p.v);
     }, 120);
   };
   return (

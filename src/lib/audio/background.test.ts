@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { ambientPatch, backgroundState } from './background'
 
 const prefs = { musicEnabled: true, ambientType: 'heavy' as const, ambientThunder: true }
-const off = { musicActive: false, ambientActive: false }
-const on = { musicActive: true, ambientActive: true }
+const off = { musicActive: false, ambientActive: false, musicOn: null }
+const on = { musicActive: true, ambientActive: true, musicOn: null }
 
 describe('backgroundState', () => {
   it('antes de ativar nesta visita, nada toca (mesmo com as preferências salvas)', () => {
@@ -14,7 +14,11 @@ describe('backgroundState', () => {
     expect(backgroundState({ ...prefs, musicEnabled: false }, on).music).toBe(false)
   })
   it('música e ambiente são independentes', () => {
-    expect(backgroundState(prefs, { musicActive: true, ambientActive: false })).toEqual({ music: true, ambient: 'none', thunder: false })
+    expect(backgroundState(prefs, { musicActive: true, ambientActive: false, musicOn: null })).toEqual({ music: true, ambient: 'none', thunder: false })
+  })
+  it('o clique em tocar/pausar vale na hora, antes de a configuração gravada voltar do banco', () => {
+    expect(backgroundState({ ...prefs, musicEnabled: false }, { ...on, musicOn: true }).music).toBe(true)
+    expect(backgroundState(prefs, { ...on, musicOn: false }).music).toBe(false)
   })
 })
 

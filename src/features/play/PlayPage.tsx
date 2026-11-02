@@ -133,7 +133,7 @@ export default function PlayPage() {
   useEffect(() => {
     if (!game || !end || endSoundRef.current === gameId) return;
     endSoundRef.current = gameId;
-    playSfx(END_SOUND[outcome(end, game.userColor)]);
+    playSfx(END_SOUND[outcome(end, game.userColor)], { finale: true });
   }, [game, end, gameId]);
 
   // Fim da partida: salva sozinha em Minhas partidas (uma vez por partida; sem lances, não há o que salvar).

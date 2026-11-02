@@ -8,9 +8,14 @@ import type { AmbientType, Settings } from '@/lib/settings';
 export interface BackgroundSession {
   musicActive: boolean;
   ambientActive: boolean;
+  /**
+   * Escolha feita agora no play/pausa, que vale até a configuração gravada voltar do banco
+   * (sem isso, a música pararia por um instante e o play sairia do gesto do clique).
+   */
+  musicOn: boolean | null;
 }
 
-export const backgroundSession = createStore<BackgroundSession>({ musicActive: false, ambientActive: false });
+export const backgroundSession = createStore<BackgroundSession>({ musicActive: false, ambientActive: false, musicOn: null });
 
 type Prefs = Pick<Settings, 'musicEnabled' | 'ambientType' | 'ambientThunder'>;
 
@@ -23,7 +28,7 @@ export interface BackgroundState {
 /** O que está tocando de fato (e o que os controles mostram). */
 export function backgroundState(prefs: Prefs, session: BackgroundSession): BackgroundState {
   return {
-    music: prefs.musicEnabled && session.musicActive,
+    music: session.musicActive && (session.musicOn ?? prefs.musicEnabled),
     ambient: session.ambientActive ? prefs.ambientType : 'none',
     thunder: session.ambientActive && prefs.ambientThunder,
   };

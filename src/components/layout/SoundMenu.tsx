@@ -4,7 +4,7 @@ import { Music, Pause, Play, SkipForward } from 'lucide-react';
 import { setSetting, useSettings, type AmbientType } from '@/lib/settings';
 import { useStore } from '@/lib/store';
 import { AMBIENT_OPTIONS, setAmbient, setMusicOn, useBackground } from '@/lib/audio/controls';
-import { musicStore, nextMusicTrack } from '@/lib/audio/music';
+import { musicStore, skipTrack } from '@/lib/audio/music';
 import { Button } from '@/components/ui/Button';
 import { Range, Segmented, Switch } from '@/components/ui/Form';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,8 @@ export function SoundMenu() {
   const s = useSettings();
   const bg = useBackground();
   const music = useStore(musicStore);
-  const active = bg.music || bg.ambient !== 'none' || bg.thunder;
+  const playing = bg.music && !music.blocked; // recusado pelo navegador: mostra "tocar"
+  const active = playing || bg.ambient !== 'none' || bg.thunder;
 
   // Fecha ao clicar fora ou com Esc
   useEffect(() => {
@@ -51,10 +52,10 @@ export function SoundMenu() {
           <section>
             <p className="mb-1.5 text-[11px] tracking-wide text-ink-muted uppercase">Música</p>
             <div className="flex items-center gap-2">
-              <Button size="icon" variant={bg.music ? 'primary' : 'secondary'} onClick={() => void setMusicOn(!bg.music)} aria-label={bg.music ? 'Pausar música' : 'Tocar música'} title={bg.music ? 'Pausar' : 'Tocar'}>
-                {bg.music ? <Pause /> : <Play />}
+              <Button size="icon" variant={playing ? 'primary' : 'secondary'} onClick={() => void setMusicOn(!playing)} aria-label={playing ? 'Pausar música' : 'Tocar música'} title={playing ? 'Pausar' : 'Tocar'}>
+                {playing ? <Pause /> : <Play />}
               </Button>
-              <Button size="icon" variant="ghost" onClick={nextMusicTrack} aria-label="Próxima faixa" title="Próxima faixa">
+              <Button size="icon" variant="ghost" onClick={skipTrack} aria-label="Próxima faixa" title="Próxima faixa">
                 <SkipForward />
               </Button>
               <p className="min-w-0 flex-1 truncate text-sm text-ink" title={music.currentName ?? undefined}>
@@ -62,6 +63,7 @@ export function SoundMenu() {
               </p>
             </div>
             {music.error && <p className="mt-1 text-xs text-negative">{music.error}</p>}
+            {music.blocked && <p className="mt-1 text-xs text-ink-muted">O navegador segurou a música. Toque em tocar para começar.</p>}
           </section>
 
           <section>

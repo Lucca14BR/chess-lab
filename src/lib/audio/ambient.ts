@@ -180,9 +180,16 @@ class RainLayer {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.linearRampToValueAtTime(level, t + 0.002);
     g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
-    src.connect(bp).connect(g).connect(panner(ctx, (Math.random() - 0.5) * 1.6)).connect(this.out);
+    const pan = panner(ctx, (Math.random() - 0.5) * 1.6);
+    src.connect(bp).connect(g).connect(pan).connect(this.out);
     src.start(t, Math.random() * (n.white.duration - 0.2), decay + 0.02);
-    src.onended = () => src.disconnect();
+    // libera todos os nós da gota (são dezenas por segundo na chuva pesada)
+    src.onended = () => {
+      src.disconnect();
+      bp.disconnect();
+      g.disconnect();
+      pan.disconnect();
+    };
   }
 
   /** Sai em fade e libera os nós. */
@@ -217,7 +224,9 @@ function playThunder(ctx: AudioContext, dest: AudioNode) {
   rumble.connect(lp).connect(env).connect(pan);
   rumble.start(t, Math.random() * n.brown.duration);
   rumble.stop(t + s.durationS + 0.05);
-  rumble.onended = () => pan.disconnect();
+  rumble.onended = () => {
+    for (const node of [rumble, lp, env, pan]) node.disconnect();
+  };
 
   if (s.crack) {
     const crack = ctx.createBufferSource();
@@ -231,6 +240,9 @@ function playThunder(ctx: AudioContext, dest: AudioNode) {
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
     crack.connect(hp).connect(g).connect(pan);
     crack.start(t, Math.random() * 2, 0.4);
+    crack.onended = () => {
+      for (const node of [crack, hp, g]) node.disconnect();
+    };
   }
 }
 

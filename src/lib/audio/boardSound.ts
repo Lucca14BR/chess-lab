@@ -1,5 +1,5 @@
 import { transitionSound } from './moveSound';
-import { playSfx, sfxWanted } from './sfx';
+import { playMoveSfx, sfxWanted } from './sfx';
 
 /**
  * Som da troca de posição de um tabuleiro (ver transitionSound). Separado de sfx.ts
@@ -8,5 +8,5 @@ import { playSfx, sfxWanted } from './sfx';
 export function playMoveTransition(prev: string, next: string, lastMove: [string, string] | null, navigation: boolean): void {
   if (!sfxWanted(navigation)) return;
   const sound = transitionSound(prev, next, lastMove, navigation);
-  if (sound) playSfx(sound);
+  if (sound) playMoveSfx(sound);
 }

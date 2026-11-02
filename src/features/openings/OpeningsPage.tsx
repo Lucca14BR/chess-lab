@@ -251,10 +251,17 @@ function RepertoireEditor({ id, onBack }: { id: string; onBack: () => void }) {
 
   const full = [...path, ...draft];
   let fen = START_FEN;
+  let lastMove: [string, string] | null = null; // destaque e som do lance, como no Tabuleiro
   try {
-    fen = fenAfter(full);
+    const c = new Chess();
+    for (const san of full) {
+      const m = c.move(san);
+      lastMove = [m.from, m.to];
+    }
+    fen = c.fen();
   } catch {
     fen = START_FEN;
+    lastMove = null;
   }
   const node = findNode(tree, path);
   const children = draft.length ? [] : node ? node.children : tree.children;
@@ -340,7 +347,7 @@ function RepertoireEditor({ id, onBack }: { id: string; onBack: () => void }) {
       <div className="grid gap-5 xl:grid-cols-[minmax(0,520px)_minmax(0,1fr)]">
         <div className="space-y-3">
           <div className="overflow-hidden rounded-md border border-line">
-            <ChessBoard fen={fen} orientation={entry.color} onMove={onMove} syncToken={full.length} navigation={navigated} arrows={children.slice(0, 5).map((c) => ({ from: c.from, to: c.to, brush: 'green' }))} />
+            <ChessBoard fen={fen} orientation={entry.color} onMove={onMove} lastMove={lastMove} syncToken={full.length} navigation={navigated} arrows={children.slice(0, 5).map((c) => ({ from: c.from, to: c.to, brush: 'green' }))} />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button size="icon-sm" variant="ghost" aria-label="Voltar um lance" disabled={!full.length} onClick={() => (draft.length ? setDraft((d) => d.slice(0, -1)) : setPath((p) => p.slice(0, -1)))}>

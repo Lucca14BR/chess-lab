@@ -17,8 +17,14 @@ export function unlockAudio(): void {
     master = ctx.createGain();
     master.connect(ctx.destination);
   }
-  if (ctx.state === 'suspended') void ctx.resume().catch(() => {});
+  // 'suspended' ou, no iOS, 'interrupted' (ligação, outro app): retoma dentro do gesto
+  if (ctx.state !== 'running') void ctx.resume().catch(() => {});
   if (!audioUnlock.get().unlocked) audioUnlock.set({ unlocked: true });
+}
+
+/** O contexto está tocando agora? (suspenso, sons agendados sairiam todos juntos ao retomar) */
+export function audioRunning(): boolean {
+  return ctx?.state === 'running';
 }
 
 /** Contexto pronto para tocar (null antes da primeira interação). */

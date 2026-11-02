@@ -1,5 +1,5 @@
 import type { SfxSet } from '@/lib/settings';
-import { getAudioContext, getAudioOutput } from './context';
+import { audioRunning, getAudioContext, getAudioOutput } from './context';
 
 /** Efeitos sonoros (pacotes da Lichess, por Enigmahack, AGPLv3+), tocados por Web Audio. */
 
@@ -70,8 +70,16 @@ export function configureSfx(next: SfxConfig): void {
   if (changedSet && getAudioContext()) preloadSfx();
 }
 
-/** Toca um efeito. Cada chamada cria a própria fonte, então sons rápidos se sobrepõem sem cortar. */
-export function playSfx(name: SfxName, opts: { preview?: boolean } = {}): void {
+/** Quando tocou o último som de desfecho (vitória, derrota, empate, acerto). */
+let finaleAt = -Infinity;
+const FINALE_WINDOW_MS = 300;
+
+/**
+ * Toca um efeito. Cada chamada cria a própria fonte, então sons rápidos se sobrepõem sem cortar.
+ * `finale`: som de desfecho; ele substitui o som do lance que terminou a partida ou o problema.
+ */
+export function playSfx(name: SfxName, opts: { preview?: boolean; finale?: boolean } = {}): void {
+  if (opts.finale) finaleAt = performance.now();
   if (!config.enabled && !opts.preview) return;
   const ctx = getAudioContext();
   const out = getAudioOutput();
@@ -79,8 +87,8 @@ export function playSfx(name: SfxName, opts: { preview?: boolean } = {}): void {
   if (!ctx || !out || !pending || config.volume <= 0) return;
   const requestedAt = performance.now();
   void pending.then((buffer) => {
-    // ainda carregando há muito tempo: melhor não tocar atrasado
-    if (!buffer || performance.now() - requestedAt > 1500) return;
+    // ainda carregando há muito tempo: melhor não tocar atrasado; contexto parado: não acumular
+    if (!buffer || performance.now() - requestedAt > 1500 || !audioRunning()) return;
     const src = ctx.createBufferSource();
     const gain = ctx.createGain();
     src.buffer = buffer;
@@ -88,6 +96,17 @@ export function playSfx(name: SfxName, opts: { preview?: boolean } = {}): void {
     src.connect(gain).connect(out);
     src.start();
   });
+}
+
+/**
+ * Som de lance do tabuleiro. Espera a rodada atual terminar: se o mesmo lance trouxe um som
+ * de desfecho (tocado antes, no clique, ou depois, no efeito da página), o lance fica em silêncio.
+ */
+export function playMoveSfx(name: SfxName): void {
+  window.setTimeout(() => {
+    if (performance.now() - finaleAt < FINALE_WINDOW_MS) return;
+    playSfx(name);
+  }, 0);
 }
 
 /** Efeitos ligados? (e, navegando, se a opção de tocar ao navegar está ligada) */

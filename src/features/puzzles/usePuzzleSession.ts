@@ -115,7 +115,7 @@ export function usePuzzleSession(puzzle: Puzzle | null) {
       setLastMove([from, to]);
       if (isLast) {
         if (status === 'playing') {
-          playSfx('GenericNotify');
+          playSfx('GenericNotify', { finale: true });
           setStatus('solved');
           void record(true);
         } else setStatus('failed');
