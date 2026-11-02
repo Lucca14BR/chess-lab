@@ -4,7 +4,7 @@
 import { createZstdDecompress } from 'node:zlib';
 import { Readable } from 'node:stream';
 import { createInterface } from 'node:readline';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { Chess } from 'chess.js';
 
 const SOURCE = 'https://database.lichess.org/lichess_db_puzzle.csv.zst';
@@ -22,6 +22,15 @@ const CATEGORIES = {
   xequeMate: ['mate'],
   combinacao: ['long', 'veryLong'],
   defesa: ['defensiveMove'],
+  pecaSolta: ['hangingPiece'],
+  pecaPresa: ['trappedPiece'],
+  mateEm1: ['mateIn1'],
+  mateEm2: ['mateIn2'],
+  mateCorredor: ['backRankMate'],
+  removerDefensor: ['capturingDefender'],
+  atracao: ['attraction'],
+  finais: ['endgame'],
+  promocao: ['promotion'],
 };
 
 const LEVELS = [
@@ -33,6 +42,20 @@ const LEVELS = [
 const buckets = new Map();
 for (const c of Object.keys(CATEGORIES)) for (const l of LEVELS) buckets.set(`${c}|${l.id}`, []);
 const full = () => [...buckets.values()].every((b) => b.length >= PER_BUCKET);
+
+// Mantém os puzzles já publicados (o histórico de tentativas aponta para eles) e só completa as cotas que faltam.
+const known = new Set();
+const OUT = 'public/data/puzzles.json';
+if (existsSync(OUT)) {
+  for (const p of JSON.parse(readFileSync(OUT, 'utf8')).puzzles) {
+    const b = buckets.get(`${p.category}|${p.level}`);
+    if (b && b.length < PER_BUCKET) {
+      b.push(p);
+      known.add(p.id);
+    }
+  }
+  console.log(`Mantidos ${known.size} puzzles existentes.`);
+}
 
 function validate(fen, moves) {
   try {
@@ -63,7 +86,7 @@ for await (const line of rl) {
   const r = Number(rating);
   if (Number(popularity) < 85 || Number(plays) < 300 || Number(rd) > 80) continue;
   const level = LEVELS.find((l) => r >= l.min && r < l.max);
-  if (!level) continue;
+  if (!level || known.has(id)) continue;
   const themes = themesStr.split(' ');
   const candidates = Object.entries(CATEGORIES)
     .filter(([, tags]) => tags.some((t) => themes.includes(t)))

@@ -50,6 +50,15 @@ export const CATEGORY_INFO: Record<PuzzleCategory, { label: string; description:
   xequeMate: { label: 'Xeque-mate', description: 'Padrões de mate forçado em um ou mais lances.' },
   combinacao: { label: 'Combinações', description: 'Sequências táticas longas (três ou mais lances seus) que exigem cálculo preciso.' },
   defesa: { label: 'Defesa', description: 'Encontrar o único lance que segura a posição diante de uma ameaça.' },
+  pecaSolta: { label: 'Peças soltas', description: 'Uma peça ficou sem defesa: encontre-a e capture com segurança.' },
+  pecaPresa: { label: 'Peça presa', description: 'Uma peça sem casas de fuga: prenda-a e ganhe material.' },
+  mateEm1: { label: 'Mate em 1', description: 'Um único lance dá xeque-mate.' },
+  mateEm2: { label: 'Mate em 2', description: 'Xeque-mate forçado em dois lances seus.' },
+  mateCorredor: { label: 'Mate no corredor', description: 'O rei está preso atrás dos próprios peões e cai na última fileira.' },
+  removerDefensor: { label: 'Remover o defensor', description: 'Capture a peça que protege outra e ganhe o que ela defendia.' },
+  atracao: { label: 'Atração', description: 'Atraia o rei ou uma peça para uma casa ruim, muitas vezes com um sacrifício.' },
+  finais: { label: 'Finais', description: 'Posições de final: torres, peões e peças menores, com pouco material.' },
+  promocao: { label: 'Promoção', description: 'Leve um peão até a última fileira (ou use a ameaça de coroar).' },
 };
 
 export const LEVEL_INFO: Record<Level, { label: string; range: string }> = {

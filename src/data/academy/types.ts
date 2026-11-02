@@ -21,7 +21,16 @@ export type PuzzleCategory =
   | 'sacrificio'
   | 'xequeMate'
   | 'combinacao'
-  | 'defesa';
+  | 'defesa'
+  | 'pecaSolta'
+  | 'pecaPresa'
+  | 'mateEm1'
+  | 'mateEm2'
+  | 'mateCorredor'
+  | 'removerDefensor'
+  | 'atracao'
+  | 'finais'
+  | 'promocao';
 
 export interface BoardArrow {
   from: string; // casa, ex.: "e2"
