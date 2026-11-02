@@ -38,7 +38,7 @@ Os dados continuam no navegador de quem usa o site (IndexedDB). Para levar dados
 | --- | --- |
 | Painel Inicial | Saudação, rating real, evolução, metas da semana, atividade, último treino, próximas atividades, aulas em andamento, puzzles e recomendações. Sem conta conectada, convida a conectar e não mostra números inventados. |
 | Tabuleiro | chess.js + Chessground: lances legais, arrastar e soltar, SAN/UCI, desfazer/refazer, comentários, FEN, PGN (importar/exportar, várias partidas), posições favoritas, partidas próprias, Stockfish sob demanda, análise completa de partida e **tutor de IA** (revisão da partida e conversa sobre a posição). |
-| Puzzles | 1.350 puzzles reais da base CC0 da Lichess, 10 temas × 3 níveis, validação lance a lance, dica, solução, explicação por tema, pontuação, histórico, tempo, favoritos e estatísticas por tema. |
+| Puzzles | Cerca de 2.500 puzzles reais da base CC0 da Lichess, 19 temas × 3 níveis (de garfos e cravadas a peças soltas, mates, finais e promoção), validação lance a lance, dica, solução, explicação por tema, pontuação, histórico, tempo, favoritos e estatísticas por tema. |
 | Academia | 8 trilhas com aulas, exemplos em tabuleiro, exercícios validados, progresso e pré-requisitos. |
 | Aberturas | Biblioteca (8 aberturas com ideias, planos dos dois lados, variantes, armadilhas, erros comuns, posições-chave), árvore de variantes navegável, anotações por posição e repertório próprio de brancas/pretas com importação e exportação de PGN. |
 | Desempenho | Filtros por período, modalidade, cor; evolução de rating (uma modalidade por vez), V/E/D, por cor, por ritmo, por abertura, frequência, histórico mensal, lista de partidas, puzzles e tempo de estudo. |
