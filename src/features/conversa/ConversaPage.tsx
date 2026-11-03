@@ -29,7 +29,9 @@ export default function ConversaPage() {
 
   // Atalhos de teclado (fora dos campos de texto)
   useEffect(() => {
+    if (loading) return; // diálogo de carregar aberto: as setas são dele
     const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return; // atalhos do navegador e do sistema
       const t = e.target as HTMLElement;
       if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable) return;
       if (e.key === 'ArrowLeft') h.undo();
@@ -42,7 +44,7 @@ export default function ConversaPage() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [h]);
+  }, [h, loading]);
 
   const onMove = (from: string, to: string, promotion?: Promotion) => {
     if (!h.play(from, to, promotion)) setSyncToken((n) => n + 1);
@@ -52,16 +54,17 @@ export default function ConversaPage() {
   const replaceBoard = async (title: string): Promise<boolean> =>
     !h.moves.length || (await confirm({ title, message: 'Os lances do tabuleiro serão trocados pela nova posição.', confirmLabel: 'Trocar' }));
 
+  // Carregar FEN ou posição salva: o tabuleiro vira para o lado da vez
   const loadFen = (fen: string) => {
     h.reset(fen);
     setOrientation(fen.split(' ')[1] === 'b' ? 'black' : 'white');
   };
 
-  // Posição de uma pergunta antiga ou de um lance da resposta
+  // Posição de uma pergunta antiga ou de um lance da resposta: mantém o lado do tabuleiro
   const goToFen = async (fen: string): Promise<boolean> => {
     if (sameSpot(fen, h.fen)) return true;
     if (!(await replaceBoard('Levar o tabuleiro para esta posição?'))) return false;
-    loadFen(fen);
+    h.reset(fen);
     return true;
   };
 

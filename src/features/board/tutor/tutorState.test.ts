@@ -99,6 +99,30 @@ describe('askInChat (página Conversa)', () => {
     expect((await inChat()).map((m) => m.text)).toEqual(['Plano?', 'Ok.']);
   });
 
+  it('nova tentativa usa a posição da pergunta que falhou, não a do tabuleiro agora', async () => {
+    const FEN_X = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1';
+    const fail = vi.fn(async () => Promise.reject(new GeminiError('offline', 'x')));
+    await askInChat({ chatId: 'c1', fen: FEN_X, question: 'Plano?' }, false, makeDeps(fail));
+    clearTutorCache(); // para ver qual posição a nova tentativa analisa
+
+    const analyze = vi.fn(async (fen: string) => analysis(fen));
+    const ok = vi.fn(async () => ({ text: 'Ok.', model: 'm' }));
+    await askInChat({ chatId: 'c1', fen: START, question: 'Plano?' }, true, { ...makeDeps(ok), analyze });
+    expect(analyze.mock.calls.map((c) => c[0])).toEqual([FEN_X]);
+    expect((await inChat()).map((m) => m.fen)).toEqual([FEN_X, FEN_X]);
+  });
+
+  it('nova tentativa de pergunta sem posição continua sem posição', async () => {
+    const fail = vi.fn(async () => Promise.reject(new GeminiError('offline', 'x')));
+    await askInChat({ chatId: 'c1', fen: null, question: 'Como treinar?' }, false, makeDeps(fail));
+
+    const analyze = vi.fn(async (fen: string) => analysis(fen));
+    const ok = vi.fn(async () => ({ text: 'Ok.', model: 'm' }));
+    await askInChat({ chatId: 'c1', fen: START, question: 'Como treinar?' }, true, { ...makeDeps(ok), analyze });
+    expect(analyze).not.toHaveBeenCalled();
+    expect((await inChat()).map((m) => m.fen)).toEqual([null, null]);
+  });
+
   it('pergunta vazia não faz nada', async () => {
     const generate = vi.fn(async () => ({ text: 'Ok.', model: 'm' }));
     await askInChat({ chatId: 'c1', fen: null, question: '   ' }, false, makeDeps(generate));

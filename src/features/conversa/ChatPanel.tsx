@@ -181,6 +181,7 @@ export function ChatPanel({ fen, onShowMove, onLoadFen }: { fen: string; onShowM
               }
             >
               {error.message}
+              <span className="mt-1 block text-[11px] opacity-80">A nova tentativa repete a pergunta com a mesma posição anexada (ou sem posição) de antes.</span>
             </Alert>
           )}
           <form

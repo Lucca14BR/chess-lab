@@ -39,10 +39,12 @@ async function track(t: string, question: string, work: (onPhase: (p: TutorPhase
   }
 }
 
-// Nova tentativa: tira a pergunta que ficou sem resposta para não duplicá-la
-async function dropUnanswered(t: string, question: string): Promise<void> {
+// Nova tentativa: tira a pergunta que ficou sem resposta para não duplicá-la; devolve a pergunta tirada
+async function dropUnanswered(t: string, question: string): Promise<TutorMessage | null> {
   const last = (await db.tutorMessages.where('threadId').equals(t).sortBy('createdAt')).at(-1);
-  if (last?.role === 'user' && last.text === question) await db.tutorMessages.delete(last.id);
+  if (last?.role !== 'user' || last.text !== question) return null;
+  await db.tutorMessages.delete(last.id);
+  return last;
 }
 
 /** Pergunta na conversa da posição; retry não duplica a pergunta. */
@@ -56,14 +58,18 @@ export function askInPosition(input: { fen: string; played: AnalyzedMove | null;
   });
 }
 
-/** Pergunta numa conversa da página Conversa (fen null = sem posição anexada); retry não duplica a pergunta. */
+/**
+ * Pergunta numa conversa da página Conversa (fen null = sem posição anexada).
+ * retry não duplica a pergunta e repete a posição dela (ou a falta de posição), mesmo que o tabuleiro tenha mudado.
+ */
 export function askInChat(input: { chatId: string; fen: string | null; question: string }, retry = false, deps?: Partial<TutorDeps>): Promise<void> {
   const question = input.question.trim();
   if (!question) return Promise.resolve();
   const t = threadIds.chat(input.chatId);
   return track(t, question, async (onPhase) => {
-    if (retry) await dropUnanswered(t, question);
-    await askChat({ ...input, question }, deps, { onPhase });
+    const dropped = retry ? await dropUnanswered(t, question) : null;
+    const fen = dropped ? dropped.fen : input.fen;
+    await askChat({ chatId: input.chatId, fen, question }, deps, { onPhase });
   });
 }
 
