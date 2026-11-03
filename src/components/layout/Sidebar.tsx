@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router';
-import { Home, ChessKnight, Swords, Puzzle, GraduationCap, BookOpenText, ChartLine, NotebookPen, Dumbbell, Settings, X } from 'lucide-react';
+import { Home, ChessKnight, Swords, MessagesSquare, Puzzle, GraduationCap, BookOpenText, ChartLine, NotebookPen, Dumbbell, Settings, X } from 'lucide-react';
 import { useUserName } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 import { Logo } from './Logo';
@@ -11,6 +11,7 @@ export const NAV = [
       { to: '/', label: 'Painel Inicial', icon: Home, end: true },
       { to: '/tabuleiro', label: 'Tabuleiro', icon: ChessKnight },
       { to: '/jogar', label: 'Jogar', icon: Swords },
+      { to: '/conversa', label: 'Conversa', icon: MessagesSquare },
       { to: '/puzzles', label: 'Puzzles', icon: Puzzle },
       { to: '/academia', label: 'Academia', icon: GraduationCap },
     ],

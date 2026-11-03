@@ -6,6 +6,7 @@ import { NotFound } from '@/features/NotFound';
 const Dashboard = lazy(() => import('@/features/dashboard/DashboardPage'));
 const Studio = lazy(() => import('@/features/board/StudioPage'));
 const Play = lazy(() => import('@/features/play/PlayPage'));
+const Conversa = lazy(() => import('@/features/conversa/ConversaPage'));
 const Puzzles = lazy(() => import('@/features/puzzles/PuzzlesPage'));
 const Academy = lazy(() => import('@/features/academy/AcademyPage'));
 const Lesson = lazy(() => import('@/features/academy/LessonPage'));
@@ -24,6 +25,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="tabuleiro" element={<Studio />} />
           <Route path="jogar" element={<Play />} />
+          <Route path="conversa" element={<Conversa />} />
           <Route path="puzzles" element={<Puzzles />} />
           <Route path="academia" element={<Academy />} />
           <Route path="academia/:lessonId" element={<Lesson />} />

@@ -2,21 +2,30 @@ import { Fragment } from 'react';
 import type { Segment } from '@/lib/tutor/types';
 import { plainSegments } from '@/lib/tutor/verify';
 import { Badge } from '@/components/ui/Badge';
+import { cn } from '@/lib/utils';
 
 type MoveSegment = Extract<Segment, { kind: 'move' }>;
 
+/** Aviso dos lances não conferidos (a página Conversa usa um texto próprio). */
+export interface UnverifiedNotice {
+  label: string;
+  title: string;
+}
+
+const DEFAULT_NOTICE: UnverifiedNotice = { label: 'não confirmado pelo motor', title: 'O lance citado não está na análise do motor ou não é legal na posição' };
+
 /** Texto do tutor: lances conferidos viram botões; lances não conferidos ganham aviso. Markdown que sobrou sai na exibição. */
-export function TutorText({ segments, onMove }: { segments: Segment[]; onMove?: (s: MoveSegment) => void }) {
+export function TutorText({ segments, onMove, notice = DEFAULT_NOTICE, className }: { segments: Segment[]; onMove?: (s: MoveSegment) => void; notice?: UnverifiedNotice; className?: string }) {
   return (
-    <p className="text-xs leading-relaxed whitespace-pre-line text-ink">
+    <p className={cn('leading-relaxed whitespace-pre-line text-ink', className ?? 'text-xs')}>
       {plainSegments(segments).map((s, i) => {
         if (s.kind === 'text') return <Fragment key={i}>{s.text}</Fragment>;
         if (s.kind === 'unverified') {
           return (
             <span key={i}>
               {s.text}{' '}
-              <Badge tone="warning" title="O lance citado não está na análise do motor ou não é legal na posição">
-                não confirmado pelo motor
+              <Badge tone="warning" title={notice.title}>
+                {notice.label}
               </Badge>
             </span>
           );

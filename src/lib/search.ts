@@ -16,6 +16,7 @@ const PAGES: SearchResult[] = [
   { group: 'Páginas', title: 'Painel Inicial', to: '/' },
   { group: 'Páginas', title: 'Tabuleiro', subtitle: 'Jogar, analisar, FEN e PGN', to: '/tabuleiro' },
   { group: 'Páginas', title: 'Jogar', subtitle: 'Partida contra o computador', to: '/jogar' },
+  { group: 'Páginas', title: 'Conversa', subtitle: 'Chat com o tutor de IA e tabuleiro', to: '/conversa' },
   { group: 'Páginas', title: 'Puzzles', subtitle: 'Sala de desafios táticos', to: '/puzzles' },
   { group: 'Páginas', title: 'Academia', subtitle: 'Trilhas e aulas', to: '/academia' },
   { group: 'Páginas', title: 'Aberturas', subtitle: 'Biblioteca e repertório', to: '/aberturas' },
