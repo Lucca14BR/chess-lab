@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { Dexie } from 'dexie'
-import { ChessLabDB, STORES_V1, STORES_V2, db } from '@/lib/db/schema'
+import { ChessLabDB, STORES_V1, STORES_V2, STORES_V3, STORES_V4, db } from '@/lib/db/schema'
 import { clearAllData, exportBackup, importBackup } from '@/lib/services/backup'
 import { MAX_MUSIC_BYTES, addMusicFiles, checkMusicFile, musicSaveError, removeMusicTrack, trackName } from './musicLibrary'
 
@@ -97,12 +97,12 @@ describe('upgrade do banco v2 → v3', () => {
 
     const next = new ChessLabDB(name)
     await next.open()
-    expect(next.verno).toBe(3)
+    expect(next.verno).toBe(4) // abre na versão atual (v4 acrescentou chatThreads)
     expect((await next.notes.get('n1'))?.title).toBe('Nota')
     expect((await next.secrets.get('gemini'))?.value).toBe('k')
     expect(await next.tutorMessages.count()).toBe(1)
     expect(await next.musicTracks.count()).toBe(0)
-    expect(next.tables.map((t) => t.name).sort()).toEqual([...Object.keys(STORES_V1), ...Object.keys(STORES_V2), 'musicTracks'].sort())
+    expect(next.tables.map((t) => t.name).sort()).toEqual([...Object.keys(STORES_V1), ...Object.keys(STORES_V2), ...Object.keys(STORES_V3), ...Object.keys(STORES_V4)].sort())
     next.close()
   })
 })

@@ -28,4 +28,5 @@ export function useHasGeminiKey(): boolean | undefined {
 export const threadIds = {
   review: (analysisId: string) => `review:${analysisId}`,
   position: (fen: string) => `pos:${positionKey(fen)}`,
+  chat: (chatId: string) => `chat:${chatId}`, // página Conversa
 }

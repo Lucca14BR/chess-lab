@@ -5,7 +5,7 @@ import { db, type TutorMessage } from '@/lib/db/schema';
 import type { AnalysisResult } from '@/lib/engine/stockfish';
 import { threadIds } from '@/lib/tutor/key';
 import { clearTutorCache, type TutorDeps } from '@/lib/tutor/service';
-import { askInPosition, resetTutorUi, saveReply, tutorBusy, tutorStore } from './tutorState';
+import { askInChat, askInPosition, resetTutorUi, saveReply, tutorBusy, tutorStore } from './tutorState';
 
 const analysis = (fen: string): AnalysisResult => ({ fen, depth: 10, bestMove: 'e2e4', lines: [{ multipv: 1, depth: 10, cp: 20, mate: null, pv: ['e2e4'] }] });
 
@@ -63,5 +63,46 @@ describe('tutorState', () => {
     tutorStore.set({ errors: { [thread]: { question: 'q', message: 'm' } }, notes: { m1: 'n1' } });
     resetTutorUi();
     expect(tutorStore.get()).toMatchObject({ errors: {}, notes: {} });
+  });
+});
+
+describe('askInChat (página Conversa)', () => {
+  const chat = threadIds.chat('c1');
+  const inChat = () => db.tutorMessages.where('threadId').equals(chat).sortBy('createdAt');
+
+  beforeEach(async () => {
+    await db.chatThreads.clear();
+  });
+
+  it('marca o pedido na conversa e ignora um segundo envio', async () => {
+    let release!: () => void;
+    const generate = vi.fn(() => new Promise<{ text: string; model: string }>((r) => (release = () => r({ text: 'Ok.', model: 'm' }))));
+    const first = askInChat({ chatId: 'c1', fen: null, question: 'Como treinar?' }, false, makeDeps(generate));
+    await vi.waitFor(() => expect(generate).toHaveBeenCalled());
+    expect(tutorStore.get().pending[chat]).toBe('consulting');
+    await askInChat({ chatId: 'c1', fen: null, question: 'De novo?' }, false, makeDeps(generate));
+    release();
+    await first;
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(tutorStore.get().pending).toEqual({});
+    expect((await inChat()).map((m) => m.text)).toEqual(['Como treinar?', 'Ok.']);
+  });
+
+  it('guarda o erro e a nova tentativa não duplica a pergunta', async () => {
+    const fail = vi.fn(async () => Promise.reject(new GeminiError('rate-limit', 'x')));
+    await askInChat({ chatId: 'c1', fen: START, question: 'Plano?' }, false, makeDeps(fail));
+    expect(tutorStore.get().errors[chat]).toEqual({ question: 'Plano?', message: expect.stringContaining('Limite') });
+
+    const ok = vi.fn(async () => ({ text: 'Ok.', model: 'm' }));
+    await askInChat({ chatId: 'c1', fen: START, question: 'Plano?' }, true, makeDeps(ok));
+    expect(tutorStore.get().errors[chat]).toBeUndefined();
+    expect((await inChat()).map((m) => m.text)).toEqual(['Plano?', 'Ok.']);
+  });
+
+  it('pergunta vazia não faz nada', async () => {
+    const generate = vi.fn(async () => ({ text: 'Ok.', model: 'm' }));
+    await askInChat({ chatId: 'c1', fen: null, question: '   ' }, false, makeDeps(generate));
+    expect(generate).not.toHaveBeenCalled();
+    expect(await db.chatThreads.count()).toBe(0);
   });
 });

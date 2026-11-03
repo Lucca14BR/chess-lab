@@ -280,7 +280,7 @@ export interface SettingRow {
   value: unknown;
 }
 
-/** Mensagem da conversa com o tutor de IA (fio = revisão de partida ou posição). */
+/** Mensagem da conversa com o tutor de IA (fio = revisão de partida, posição ou conversa da página Conversa: 'chat:<id>'). */
 export interface TutorMessage {
   id: string;
   threadId: string;
@@ -288,7 +288,8 @@ export interface TutorMessage {
   text: string;
   segments: Segment[] | null;
   model: string | null;
-  fen: string;
+  /** Posição da pergunta; null = conversa sem posição anexada. */
+  fen: string | null;
   createdAt: number;
   review?: {
     moments: Array<{ ply: number; title: string; explanation: Segment[]; whatToConsider: Segment[] }>;
@@ -312,6 +313,14 @@ export interface MusicTrackRow {
   size: number;
   addedAt: number;
   blob: Blob;
+}
+
+/** Conversa salva da página Conversa (as mensagens ficam em tutorMessages, threadId 'chat:<id>'). */
+export interface ChatThread {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export const STORES_V1 = {
@@ -346,6 +355,10 @@ export const STORES_V3 = {
   musicTracks: 'id, addedAt',
 };
 
+export const STORES_V4 = {
+  chatThreads: 'id, updatedAt',
+};
+
 export class ChessLabDB extends Dexie {
   declare account: EntityTable<AccountRow, 'id'>;
   declare archives: EntityTable<ArchiveRow, 'url'>;
@@ -369,12 +382,14 @@ export class ChessLabDB extends Dexie {
   declare tutorMessages: EntityTable<TutorMessage, 'id'>;
   declare secrets: EntityTable<SecretRow, 'key'>;
   declare musicTracks: EntityTable<MusicTrackRow, 'id'>;
+  declare chatThreads: EntityTable<ChatThread, 'id'>;
 
   constructor(name = 'chess-lab') {
     super(name);
     this.version(1).stores(STORES_V1);
     this.version(2).stores(STORES_V2);
     this.version(3).stores(STORES_V3);
+    this.version(4).stores(STORES_V4);
   }
 }
 

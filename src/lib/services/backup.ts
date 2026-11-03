@@ -2,7 +2,7 @@ import { db } from '@/lib/db/schema';
 
 // 'secrets' fica de fora de propósito: a chave da IA nunca vai para o backup.
 // 'musicTracks' também: são arquivos de áudio grandes, que ficam só neste navegador.
-const TABLES = ['account', 'archives', 'games', 'ownGames', 'analyses', 'positions', 'notes', 'collections', 'puzzleAttempts', 'puzzleFavorites', 'lessonProgress', 'repertoire', 'openingNotes', 'sessions', 'templates', 'planned', 'goals', 'activity', 'settings', 'tutorMessages'] as const;
+const TABLES = ['account', 'archives', 'games', 'ownGames', 'analyses', 'positions', 'notes', 'collections', 'puzzleAttempts', 'puzzleFavorites', 'lessonProgress', 'repertoire', 'openingNotes', 'sessions', 'templates', 'planned', 'goals', 'activity', 'settings', 'tutorMessages', 'chatThreads'] as const;
 
 export async function exportBackup(): Promise<string> {
   const tables: Record<string, unknown[]> = {};

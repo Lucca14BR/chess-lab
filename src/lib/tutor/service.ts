@@ -15,7 +15,8 @@ import { uid } from '@/lib/utils'
 import { buildFacts } from './facts'
 import { getGeminiKey, threadIds } from './key'
 import { findMoves } from './moves'
-import { chatRequest, levelFromStats, reviewRequest } from './prompts'
+import { touchChat } from './chat'
+import { chatRequest, freeChatRequest, levelFromStats, reviewRequest } from './prompts'
 import type { TutorLevel } from './prompts'
 import { pickMoments } from './review'
 import type { PositionFacts, Segment } from './types'
@@ -116,6 +117,45 @@ async function askedWithEngine(deps: TutorDeps, fen: string, question: string, o
   return asked
 }
 
+// Histórico = mensagens anteriores do mesmo fio, da mais antiga para a mais nova; last = hora da última
+async function threadHistory(threadId: string): Promise<{ history: Array<{ role: 'user' | 'tutor'; text: string }>; last: number }> {
+  const earlier = await db.tutorMessages.where('threadId').equals(threadId).sortBy('createdAt')
+  return { history: earlier.map((m) => ({ role: m.role, text: m.text })), last: earlier.at(-1)?.createdAt ?? 0 }
+}
+
+// A pergunta fica gravada mesmo que o resto falhe (sempre depois da última mensagem do fio)
+async function storeQuestion(threadId: string, question: string, fen: string | null, after: number): Promise<TutorMessage> {
+  const asking: TutorMessage = { id: uid(), threadId, role: 'user', text: question, segments: null, model: null, fen, createdAt: Math.max(Date.now(), after + 1) }
+  await db.tutorMessages.add(asking)
+  return asking
+}
+
+// Resposta já sem Markdown e conferida
+async function storeReply(asking: TutorMessage, model: string, text: string, segments: Segment[]): Promise<TutorMessage> {
+  const reply: TutorMessage = {
+    id: uid(),
+    threadId: asking.threadId,
+    role: 'tutor',
+    text,
+    segments,
+    model,
+    fen: asking.fen,
+    createdAt: Math.max(Date.now(), asking.createdAt + 1), // sempre depois da pergunta
+  }
+  await db.tutorMessages.add(reply)
+  return reply
+}
+
+// Ficha da posição: motor na posição e nos lances citados na pergunta
+async function factsFor(d: TutorDeps, fen: string, played: AnalyzedMove | null, question: string, onPhase?: (p: TutorPhase) => void): Promise<PositionFacts> {
+  return buildFacts({
+    fen,
+    engine: await cachedAnalyze(d, fen, onPhase),
+    played,
+    asked: await askedWithEngine(d, fen, question, onPhase),
+  })
+}
+
 export async function askTutor(
   input: { fen: string; played: AnalyzedMove | null; question: string },
   deps: Partial<TutorDeps> = {},
@@ -126,46 +166,39 @@ export async function askTutor(
   const { onPhase } = options
   const threadId = threadIds.position(fen)
 
-  // Histórico = mensagens anteriores do mesmo fio, da mais antiga para a mais nova
-  const earlier = await db.tutorMessages.where('threadId').equals(threadId).sortBy('createdAt')
-  const history = earlier.map((m) => ({ role: m.role, text: m.text }))
-
-  // A pergunta fica gravada mesmo que o resto falhe
-  const asking: TutorMessage = {
-    id: uid(),
-    threadId,
-    role: 'user',
-    text: question,
-    segments: null,
-    model: null,
-    fen,
-    createdAt: Date.now(),
-  }
-  await db.tutorMessages.add(asking)
-
-  const facts = buildFacts({
-    fen,
-    engine: await cachedAnalyze(d, fen, onPhase),
-    played,
-    asked: await askedWithEngine(d, fen, question, onPhase),
-  })
+  const { history, last } = await threadHistory(threadId)
+  const asking = await storeQuestion(threadId, question, fen, last)
+  const facts = await factsFor(d, fen, played, question, onPhase)
   const [level, name] = await Promise.all([d.level(), d.name()])
   onPhase?.('consulting')
   const result = await d.generate(chatRequest(facts, history, question, level, name))
   const text = plainText(result.text)
+  return storeReply(asking, result.model, text, verifyText(text, facts))
+}
 
-  const reply: TutorMessage = {
-    id: uid(),
-    threadId,
-    role: 'tutor',
-    text,
-    segments: verifyText(text, facts),
-    model: result.model,
-    fen,
-    createdAt: Math.max(Date.now(), asking.createdAt + 1), // sempre depois da pergunta
-  }
-  await db.tutorMessages.add(reply)
-  return reply
+/**
+ * Página Conversa: pergunta numa conversa salva (chatThreads + tutorMessages 'chat:<id>').
+ * Com fen (posição anexada), monta a ficha e confere a resposta; sem fen, nenhum lance sai confirmado.
+ */
+export async function askChat(
+  input: { chatId: string; fen: string | null; question: string },
+  deps: Partial<TutorDeps> = {},
+  options: { onPhase?: (p: TutorPhase) => void } = {},
+): Promise<TutorMessage> {
+  const d = resolveDeps(deps)
+  const { chatId, fen, question } = input
+  const { onPhase } = options
+  const threadId = threadIds.chat(chatId)
+
+  const { history, last } = await threadHistory(threadId)
+  await touchChat(chatId, question)
+  const asking = await storeQuestion(threadId, question, fen, last)
+  const facts = fen ? await factsFor(d, fen, null, question, onPhase) : null
+  const [level, name] = await Promise.all([d.level(), d.name()])
+  onPhase?.('consulting')
+  const result = await d.generate(freeChatRequest(facts, history, question, level, name))
+  const text = plainText(result.text)
+  return storeReply(asking, result.model, text, verifyText(text, facts ?? [])) // sem ficha, nada se confirma
 }
 
 type ReviewMomentOut = NonNullable<TutorMessage['review']>['moments'][number]

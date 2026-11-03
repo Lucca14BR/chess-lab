@@ -8,7 +8,7 @@ import type { AnalyzedMove, GameAnalysis } from '@/lib/db/schema'
 import type { AnalysisResult } from '@/lib/engine/stockfish'
 import { getSettings, setSetting } from '@/lib/settings'
 import { removeGeminiKey, setGeminiKey, threadIds } from './key'
-import { askTutor, clearTutorCache, generateReview, saveToNotebook } from './service'
+import { askChat, askTutor, clearTutorCache, generateReview, saveToNotebook } from './service'
 import type { TutorDeps } from './service'
 
 const FEN_B = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'
@@ -293,6 +293,101 @@ describe('Gemini padrão (sem generate injetado)', () => {
     vi.stubGlobal('fetch', vi.fn(async () => json({ models: [model('models/gemini-2.5-pro')] })))
     const { analyze, level } = makeDeps().deps
     await expect(askTutor({ fen: START, played: null, question: 'Oi?' }, { analyze, level })).rejects.toMatchObject({ kind: 'no-model' })
+  })
+})
+
+describe('askChat (página Conversa)', () => {
+  const chat = threadIds.chat('c1')
+  const inChat = () => db.tutorMessages.where('threadId').equals(chat).sortBy('createdAt')
+  const reqOf = (generate: ReturnType<typeof makeDeps>['generate'], i = 0) =>
+    generate.mock.calls[i][0] as { system: string; messages: Array<{ role: string; text: string }> }
+  const replying = (text: string) => vi.fn(async (_req: unknown) => ({ text, model: 'm' }))
+
+  beforeEach(async () => {
+    await db.chatThreads.clear()
+  })
+
+  it('com posição: analisa, manda a ficha no modo conversa e confirma os lances da ficha', async () => {
+    const generate = replying('Jogue e4; Cf3 também existe.')
+    const { deps, analyze } = makeDeps({ generate })
+    const reply = await askChat({ chatId: 'c1', fen: START, question: 'Qual é o plano?' }, deps)
+    expect(analyze).toHaveBeenCalledWith(START)
+    const req = reqOf(generate)
+    expect(req.system).toContain('conhecimento geral de xadrez')
+    expect(req.messages.at(-1)?.text).toContain('Fatos calculados pelo Chess Lab')
+    const moves = reply.segments?.filter((s) => s.kind === 'move').map((s) => s.text)
+    const unverified = reply.segments?.filter((s) => s.kind === 'unverified').map((s) => s.text)
+    expect(moves).toEqual(['e4'])
+    expect(unverified).toEqual(['Cf3'])
+    expect(reply.fen).toBe(START)
+  })
+
+  it('com posição: analisa também os lances citados na pergunta', async () => {
+    const { deps, analyze } = makeDeps()
+    await askChat({ chatId: 'c1', fen: START, question: 'e se Cf3?' }, deps)
+    expect(analyze.mock.calls.map((c) => c[0])).toContain(afterNf3())
+  })
+
+  it('sem posição: não chama o motor e nenhum lance fica confirmado', async () => {
+    const generate = replying('Na Siciliana, jogue Cf3 e depois Bb5.')
+    const { deps, analyze } = makeDeps({ generate })
+    const reply = await askChat({ chatId: 'c1', fen: null, question: 'Como jogar contra a Siciliana?' }, deps)
+    expect(analyze).not.toHaveBeenCalled()
+    expect(reqOf(generate).messages.at(-1)?.text).toContain('Sem posição anexada')
+    expect(reqOf(generate).messages.at(-1)?.text).not.toContain('Fatos calculados')
+    expect(reply.segments?.some((s) => s.kind === 'move')).toBe(false)
+    expect(reply.segments?.filter((s) => s.kind === 'unverified').map((s) => s.text)).toEqual(['Cf3', 'Bb5'])
+    expect(reply.fen).toBeNull()
+  })
+
+  it('grava pergunta e resposta na conversa e cria a conversa com o título da pergunta', async () => {
+    const { deps } = makeDeps()
+    const reply = await askChat({ chatId: 'c1', fen: null, question: 'Como treinar finais?' }, deps)
+    const rows = await inChat()
+    expect(rows.map((r) => [r.role, r.text])).toEqual([
+      ['user', 'Como treinar finais?'],
+      ['tutor', 'Boa pergunta.'],
+    ])
+    expect(rows[0].fen).toBeNull()
+    expect(rows[1].id).toBe(reply.id)
+    expect(reply.model).toBe('models/teste')
+    expect((await db.chatThreads.get('c1'))?.title).toBe('Como treinar finais?')
+  })
+
+  it('envia o histórico da conversa, sem a pergunta nova', async () => {
+    const { deps, generate } = makeDeps()
+    await askChat({ chatId: 'c1', fen: null, question: 'Primeira?' }, deps)
+    await askChat({ chatId: 'c1', fen: START, question: 'Segunda?' }, deps)
+    const req = reqOf(generate, 1)
+    expect(req.messages.map((m) => m.role)).toEqual(['user', 'model', 'user'])
+    expect(req.messages[0].text).toContain('Primeira?')
+    expect(req.messages[1].text).toBe('Boa pergunta.')
+    expect(req.messages[2].text).toContain('Segunda?')
+    expect((await inChat()).map((m) => m.fen)).toEqual([null, null, START, START])
+  })
+
+  it('leva o nome ao system e tira Markdown', async () => {
+    const generate = replying('**Dica:** treine finais')
+    const { deps } = makeDeps({ name: async () => 'Ana', generate })
+    const reply = await askChat({ chatId: 'c1', fen: null, question: 'Dica?' }, deps)
+    expect(reqOf(generate).system).toContain('O aluno se chama Ana')
+    expect(reply.text).toBe('Dica: treine finais')
+  })
+
+  it('avisa as fases: sem posição, só consultando', async () => {
+    const { deps } = makeDeps()
+    const phases: string[] = []
+    await askChat({ chatId: 'c1', fen: null, question: 'Oi?' }, deps, { onPhase: (p) => phases.push(p) })
+    expect(phases).toEqual(['consulting'])
+  })
+
+  it('erro mantém a pergunta', async () => {
+    const err = new GeminiError('offline', 'x')
+    const { deps } = makeDeps({ generate: async () => Promise.reject(err) })
+    await expect(askChat({ chatId: 'c1', fen: START, question: 'Oi?' }, deps)).rejects.toBe(err)
+    const rows = await inChat()
+    expect(rows.map((r) => r.role)).toEqual(['user'])
+    expect(await db.chatThreads.get('c1')).toBeDefined()
   })
 })
 

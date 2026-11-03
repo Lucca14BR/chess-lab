@@ -1,8 +1,8 @@
 // Estado dos pedidos ao tutor fora dos componentes: sobrevive à troca de abas.
-// Chaveado pelo id da conversa (posição ou revisão); um pedido por vez no app todo.
+// Chaveado pelo id da conversa (posição, revisão ou página Conversa); um pedido por vez no app todo.
 import { createStore } from '@/lib/store';
 import { db, type AnalyzedMove, type GameAnalysis, type TutorMessage } from '@/lib/db/schema';
-import { askTutor, generateReview, saveToNotebook, type TutorDeps, type TutorPhase } from '@/lib/tutor/service';
+import { askChat, askTutor, generateReview, saveToNotebook, type TutorDeps, type TutorPhase } from '@/lib/tutor/service';
 import { threadIds } from '@/lib/tutor/key';
 import { geminiErrorMessage } from '@/lib/ai/gemini';
 
@@ -39,17 +39,31 @@ async function track(t: string, question: string, work: (onPhase: (p: TutorPhase
   }
 }
 
-/** Pergunta na conversa da posição; retry tira a pergunta que ficou sem resposta para não duplicá-la. */
+// Nova tentativa: tira a pergunta que ficou sem resposta para não duplicá-la
+async function dropUnanswered(t: string, question: string): Promise<void> {
+  const last = (await db.tutorMessages.where('threadId').equals(t).sortBy('createdAt')).at(-1);
+  if (last?.role === 'user' && last.text === question) await db.tutorMessages.delete(last.id);
+}
+
+/** Pergunta na conversa da posição; retry não duplica a pergunta. */
 export function askInPosition(input: { fen: string; played: AnalyzedMove | null; question: string }, retry = false, deps?: Partial<TutorDeps>): Promise<void> {
   const question = input.question.trim();
   if (!question) return Promise.resolve();
   const t = threadIds.position(input.fen);
   return track(t, question, async (onPhase) => {
-    if (retry) {
-      const last = (await db.tutorMessages.where('threadId').equals(t).sortBy('createdAt')).at(-1);
-      if (last?.role === 'user' && last.text === question) await db.tutorMessages.delete(last.id);
-    }
+    if (retry) await dropUnanswered(t, question);
     await askTutor({ ...input, question }, deps, { onPhase });
+  });
+}
+
+/** Pergunta numa conversa da página Conversa (fen null = sem posição anexada); retry não duplica a pergunta. */
+export function askInChat(input: { chatId: string; fen: string | null; question: string }, retry = false, deps?: Partial<TutorDeps>): Promise<void> {
+  const question = input.question.trim();
+  if (!question) return Promise.resolve();
+  const t = threadIds.chat(input.chatId);
+  return track(t, question, async (onPhase) => {
+    if (retry) await dropUnanswered(t, question);
+    await askChat({ ...input, question }, deps, { onPhase });
   });
 }
 

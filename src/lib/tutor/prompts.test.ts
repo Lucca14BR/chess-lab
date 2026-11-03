@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { REVIEW_SCHEMA, chatRequest, levelFromStats, reviewRequest, systemPrompt } from './prompts'
+import { REVIEW_SCHEMA, chatRequest, chatSystemPrompt, freeChatRequest, levelFromStats, reviewRequest, systemPrompt } from './prompts'
 import type { PositionFacts } from './types'
 import type { ReviewMoment } from './review'
 import type { ChessComStats } from '@/lib/chesscom/types'
@@ -185,5 +185,81 @@ describe('reviewRequest', () => {
     expect(req.system).toBe(systemPrompt('iniciante', 'Caio'))
     expect(req.system).toContain('Caio')
     expect(reviewRequest(items, false, 'white', 'iniciante').system).not.toContain('se chama')
+  })
+})
+
+describe('chatSystemPrompt (página Conversa)', () => {
+  it('permite conhecimento geral de xadrez e pede para dizer quando é conselho geral', () => {
+    const p = chatSystemPrompt('intermediario')
+    expect(p).toContain('conhecimento geral de xadrez')
+    expect(p).toContain('conselho geral')
+    expect(p).not.toContain('não invente nada além deles')
+    expect(p).not.toContain('Não sugira lances que não estejam na ficha')
+  })
+
+  it('com ficha, os fatos e os lances concretos da posição vêm só dela', () => {
+    const p = chatSystemPrompt('intermediario')
+    expect(p).toContain('vêm só da ficha')
+    expect(p).toContain('não invente avaliações')
+    expect(p).toContain('Lances concretos para a posição atual, só os da ficha')
+    expect(p).toContain('Sem ficha')
+  })
+
+  it('mantém idioma, notação, Markdown, ponto de vista das brancas e nível', () => {
+    const p = chatSystemPrompt('avancado')
+    expect(p).toContain('português do Brasil')
+    expect(p).toContain('Responda em texto simples, sem Markdown (sem asteriscos, títulos ou listas com *).')
+    expect(p).toContain('SAN em inglês (N = cavalo, B = bispo, R = torre, Q = dama, K = rei)')
+    expect(p).toContain('notação portuguesa (C = cavalo, B = bispo, T = torre, D = dama, R = rei)')
+    expect(p).toContain('ponto de vista das brancas')
+    expect(p).toContain('P = 1, C e B = 3, T = 5, D = 9')
+    expect(p).toContain('Nível do aluno: avancado.')
+  })
+
+  it('com nome, fala com a pessoa pelo nome; sem nome, não', () => {
+    expect(chatSystemPrompt('iniciante', 'Ana')).toContain('O aluno se chama Ana')
+    expect(chatSystemPrompt('iniciante', '  ')).toBe(chatSystemPrompt('iniciante'))
+  })
+
+  it('o tutor da posição continua com a regra estrita dos fatos', () => {
+    expect(systemPrompt('intermediario')).not.toContain('conhecimento geral de xadrez')
+  })
+})
+
+describe('freeChatRequest', () => {
+  const history = Array.from({ length: 10 }, (_, i) => ({
+    role: (i % 2 === 0 ? 'user' : 'tutor') as 'user' | 'tutor',
+    text: `msg ${i}`,
+  }))
+
+  it('com ficha: últimas 6 mensagens e a pergunta com a ficha, no system do modo conversa', () => {
+    const req = freeChatRequest(facts, history, 'Qual é o plano?', 'intermediario', 'Bia')
+    expect(req.system).toBe(chatSystemPrompt('intermediario', 'Bia'))
+    expect(req.messages).toHaveLength(7)
+    expect(req.messages[0]).toEqual({ role: 'user', text: 'msg 4' })
+    const last = req.messages[6]
+    expect(last.role).toBe('user')
+    expect(last.text).toContain('Fatos calculados pelo Chess Lab (Stockfish + regras):')
+    expect(last.text).toContain(JSON.stringify(facts))
+    expect(last.text).toContain('Qual é o plano?')
+  })
+
+  it('sem ficha: avisa que não há posição anexada e não manda fatos', () => {
+    const req = freeChatRequest(null, [], 'Como treinar finais?', 'iniciante')
+    expect(req.messages).toHaveLength(1)
+    expect(req.messages[0].text).toContain('Como treinar finais?')
+    expect(req.messages[0].text).toContain('Sem posição anexada')
+    expect(req.messages[0].text).not.toContain('Fatos calculados')
+  })
+
+  it('funde papéis repetidos e começa pelo usuário', () => {
+    const h = [
+      { role: 'tutor' as const, text: 'sobrou' },
+      { role: 'user' as const, text: 'sem resposta' },
+    ]
+    const req = freeChatRequest(null, h, 'de novo', 'avancado')
+    expect(req.messages.map((m) => m.role)).toEqual(['user'])
+    expect(req.messages[0].text).toContain('sem resposta')
+    expect(req.messages[0].text).toContain('de novo')
   })
 })
